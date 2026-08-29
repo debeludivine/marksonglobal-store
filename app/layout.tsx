@@ -16,14 +16,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { NetworkProvider, NetworkEffectiveType } from "@/components/providers/NetworkProvider";
+import { cookies } from "next/headers";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const networkQualityCookie = cookieStore.get('x-network-quality')?.value as NetworkEffectiveType | undefined;
+  
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <NetworkProvider initialType={networkQualityCookie}>
+          {children}
+        </NetworkProvider>
+      </body>
     </html>
   );
 }

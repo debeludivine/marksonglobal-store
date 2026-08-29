@@ -4,6 +4,8 @@ import FilterSortBar from '@/components/ui/FilterSortBar'
 import { getCategoryBySlug, getProductsWithFilter } from '@/lib/api'
 import type { Metadata } from 'next'
 
+export const revalidate = 900; // 15 minutes ISR
+
 type Props = {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>

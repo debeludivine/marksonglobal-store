@@ -1,21 +1,23 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { ArrowRight, Zap, ShoppingBag, Cpu } from 'lucide-react'
 import HeroBanner from '@/components/ui/HeroBanner'
 import ProductGrid from '@/components/ui/ProductGrid'
+import ProductGridSkeleton from '@/components/ui/ProductGridSkeleton'
 import { getDeals, getProducts, getCategoryBySlug } from '@/lib/api'
 
-export default async function HomePage() {
-  const [deals, grocCat, elecCat] = await Promise.all([
-    getDeals(),
-    getCategoryBySlug('groceries'),
-    getCategoryBySlug('electronics')
-  ])
+async function DealsSection() {
+  const deals = await getDeals()
+  return <ProductGrid products={deals} />
+}
 
-  const [groceries, electronics] = await Promise.all([
-    grocCat ? getProducts(grocCat.id) : [],
-    elecCat ? getProducts(elecCat.id) : []
-  ])
+async function CategorySection({ slug }: { slug: string }) {
+  const cat = await getCategoryBySlug(slug)
+  const products = cat ? await getProducts(cat.id) : []
+  return <ProductGrid products={products} />
+}
 
+export default function HomePage() {
   return (
     <>
       {/* Hero */}
@@ -92,7 +94,9 @@ export default async function HomePage() {
               View All <ArrowRight size={16} />
             </Link>
           </div>
-          <ProductGrid products={deals} />
+          <Suspense fallback={<ProductGridSkeleton />}>
+            <DealsSection />
+          </Suspense>
         </div>
       </section>
 
@@ -110,7 +114,9 @@ export default async function HomePage() {
             See All <ArrowRight size={16} />
           </Link>
         </div>
-        <ProductGrid products={electronics} />
+        <Suspense fallback={<ProductGridSkeleton />}>
+          <CategorySection slug="electronics" />
+        </Suspense>
       </section>
 
       {/* Groceries Showcase */}
@@ -128,7 +134,9 @@ export default async function HomePage() {
               See All <ArrowRight size={16} />
             </Link>
           </div>
-          <ProductGrid products={groceries} />
+          <Suspense fallback={<ProductGridSkeleton />}>
+            <CategorySection slug="groceries" />
+          </Suspense>
         </div>
       </section>
 

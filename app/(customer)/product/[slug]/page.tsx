@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import { AdaptiveImage } from '@/components/ui/AdaptiveImage'
 import { CheckCircle } from 'lucide-react'
 import { getProductBySlug, getCategories, getProducts, getProductReviews } from '@/lib/api'
 import { createClient } from '@/lib/supabase/server'
@@ -71,7 +71,7 @@ export default async function ProductPage({ params }: Props) {
           {/* Image */}
           <div className="relative bg-brand-offwhite rounded-2xl h-72 sm:h-96 lg:h-auto flex items-center justify-center shadow-card overflow-hidden">
             {imageUrl ? (
-              <Image src={imageUrl} alt={product.name} fill className="object-contain p-4" />
+              <AdaptiveImage src={imageUrl} alt={product.name} fill className="object-contain p-4" priority={true} />
             ) : (
               <div className="text-[8rem] sm:text-[10rem] select-none">
                 {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
@@ -170,7 +170,7 @@ export default async function ProductPage({ params }: Props) {
                 <Link key={p.id} href={`/product/${p.slug}`} className="card p-3 sm:p-4 hover:-translate-y-1 transition-all duration-300">
                   <div className="relative bg-brand-offwhite rounded-xl h-24 sm:h-28 flex items-center justify-center mb-2 sm:mb-3 overflow-hidden">
                     {p.images?.[0] ? (
-                      <Image src={p.images[0]} alt={p.name} fill className="object-contain p-2" />
+                      <AdaptiveImage src={p.images[0]} alt={p.name} fill className="object-contain p-2" />
                     ) : (
                       <div className="text-4xl">{p.category_id === 'cat-electronics' ? '📦' : '🛒'}</div>
                     )}

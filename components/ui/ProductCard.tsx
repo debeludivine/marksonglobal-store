@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useOptimistic, startTransition } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { AdaptiveImage } from './AdaptiveImage'
 import { ShoppingCart, Star, Heart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { toggleWishlist } from '@/lib/customer-actions'
@@ -24,7 +24,10 @@ function formatNaira(amount: number) {
 export default function ProductCard({ product, isWishlisted = false }: Props) {
   const [added, setAdded] = useState(false)
   const [wishlisted, setWishlisted] = useState(isWishlisted)
-  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [optimisticWishlist, addOptimisticWishlist] = useOptimistic(
+    wishlisted,
+    (state, newState: boolean) => newState
+  )
   const addItem = useCartStore((s) => s.addItem)
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -34,12 +37,20 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
     setTimeout(() => setAdded(false), 1500)
   }
 
-  const handleToggleWishlist = async (e: React.MouseEvent) => {
+  const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
-    setWishlistLoading(true)
-    const result = await toggleWishlist(product.id)
-    setWishlisted(result.wishlisted)
-    setWishlistLoading(false)
+    
+    // Instantly update the UI before server responds
+    startTransition(async () => {
+      addOptimisticWishlist(!wishlisted)
+      try {
+        const result = await toggleWishlist(product.id)
+        setWishlisted(result.wishlisted)
+      } catch (error) {
+        // Rollback state gracefully if network fails
+        console.error("Network error toggling wishlist", error)
+      }
+    })
   }
 
   const discountPercent = product.discount_price
@@ -58,7 +69,7 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
       {/* Image Area */}
       <div className="relative bg-brand-offwhite h-36 sm:h-48 flex items-center justify-center overflow-hidden">
         {imageUrl ? (
-          <Image
+          <AdaptiveImage
             src={imageUrl}
             alt={product.name}
             fill
@@ -85,13 +96,12 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
         {/* Wishlist button */}
         <button
           onClick={handleToggleWishlist}
-          disabled={wishlistLoading}
           className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
-          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          aria-label={optimisticWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
         >
           <Heart
             size={15}
-            className={wishlisted ? 'text-red-500 fill-red-500' : 'text-brand-gray'}
+            className={optimisticWishlist ? 'text-red-500 fill-red-500' : 'text-brand-gray'}
           />
         </button>
       </div>
