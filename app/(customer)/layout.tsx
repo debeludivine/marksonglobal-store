@@ -9,7 +9,7 @@ export default function CustomerLayout({
   return (
     <>
       <Header />
-      <main className="pt-[calc(2.5rem+5rem)] md:pt-[calc(2.5rem+5rem)]">
+      <main className="pt-[calc(1.5rem+3.5rem)] sm:pt-[calc(2rem+4rem)] md:pt-[calc(2.5rem+5rem)]">
         {children}
       </main>
       <Footer />

@@ -5,7 +5,7 @@ import { ArrowRight, ShoppingBag, Zap } from 'lucide-react'
 
 export default function HeroBanner() {
   return (
-    <section className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden hero-gradient">
+    <section className="relative min-h-[75vh] sm:min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden hero-gradient">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-brand-gold/5 blur-3xl" />
@@ -21,18 +21,18 @@ export default function HeroBanner() {
         />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-20 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* Left — Copy */}
           <div className="animate-fade-in">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-brand-gold/20 border border-brand-gold/30 text-brand-gold rounded-full px-4 py-1.5 text-xs font-[Outfit,sans-serif] font-bold uppercase tracking-widest mb-6">
+            <div className="inline-flex items-center gap-2 bg-brand-gold/20 border border-brand-gold/30 text-brand-gold rounded-full px-3 py-1 text-xs font-[Outfit,sans-serif] font-bold uppercase tracking-wider mb-4">
               <Zap size={12} fill="currentColor" />
               Nigeria&apos;s Premium Digital Supermarket
             </div>
 
-            <h1 className="font-[Outfit,sans-serif] font-black text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.1] mb-6">
+            <h1 className="font-[Outfit,sans-serif] font-black text-3xl sm:text-5xl lg:text-6xl text-white leading-[1.1] mb-4 sm:mb-6">
               Everything You{' '}
               <span className="text-gradient-gold">Need.</span>
               <br />
@@ -40,7 +40,7 @@ export default function HeroBanner() {
               <span className="text-white/80">Your Door.</span>
             </h1>
 
-            <p className="text-white/70 text-base md:text-lg leading-relaxed mb-8 max-w-md font-[Inter,sans-serif]">
+            <p className="text-white/70 text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8 max-w-md font-[Inter,sans-serif]">
               Shop premium groceries, fresh provisions, and the latest electronics —
               all in one place. Quality guaranteed, prices you&apos;ll love.
             </p>
@@ -67,14 +67,14 @@ export default function HeroBanner() {
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-8 mt-10 pt-8 border-t border-white/10">
+            <div className="flex items-center gap-6 sm:gap-8 mt-6 sm:mt-10 pt-6 sm:pt-8 border-t border-white/10">
               {[
                 { value: '500+', label: 'Products' },
                 { value: '24hrs', label: 'Delivery' },
                 { value: '100%', label: 'Authentic' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="font-[Outfit,sans-serif] font-black text-2xl text-brand-gold">{stat.value}</div>
+                  <div className="font-[Outfit,sans-serif] font-black text-xl sm:text-2xl text-brand-gold">{stat.value}</div>
                   <div className="text-white/50 text-xs font-[Inter,sans-serif] mt-0.5">{stat.label}</div>
                 </div>
               ))}

@@ -42,9 +42,9 @@ export default function ProductCard({ product }: Props) {
       className="card group flex flex-col overflow-hidden hover:-translate-y-1 transition-all duration-300"
     >
       {/* Image Area */}
-      <div className="relative bg-brand-offwhite h-48 flex items-center justify-center overflow-hidden">
+      <div className="relative bg-brand-offwhite h-36 sm:h-48 flex items-center justify-center overflow-hidden">
         {/* Placeholder visual */}
-        <div className="text-6xl select-none">
+        <div className="text-5xl sm:text-6xl select-none">
           {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
         </div>
 
@@ -73,19 +73,19 @@ export default function ProductCard({ product }: Props) {
       </div>
 
       {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
+      <div className="p-3 sm:p-4 flex flex-col flex-1">
         {/* Category */}
         <p className="text-xs text-brand-gray font-[Inter,sans-serif] mb-1.5 uppercase tracking-wide">
           {product.category_id === 'cat-electronics' ? 'Electronics' : 'Groceries'}
         </p>
 
         {/* Name */}
-        <h3 className="font-[Outfit,sans-serif] font-semibold text-brand-charcoal text-sm leading-snug line-clamp-2 mb-3 flex-1">
+        <h3 className="font-[Outfit,sans-serif] font-semibold text-brand-charcoal text-xs sm:text-sm leading-snug line-clamp-2 mb-2 sm:mb-3 flex-1">
           {product.name}
         </h3>
 
         {/* Rating (static for now) */}
-        <div className="flex items-center gap-1 mb-3">
+        <div className="flex items-center gap-0.5 sm:gap-1 mb-2 sm:mb-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <Star
               key={i}
@@ -97,8 +97,8 @@ export default function ProductCard({ product }: Props) {
         </div>
 
         {/* Price */}
-        <div className="flex items-baseline gap-2 mb-4">
-          <span className="price-tag text-lg">
+        <div className="flex items-baseline gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+          <span className="price-tag text-base sm:text-lg">
             {formatNaira(product.discount_price ?? product.price)}
           </span>
           {product.discount_price && (
@@ -113,7 +113,7 @@ export default function ProductCard({ product }: Props) {
           onClick={handleAddToCart}
           disabled={isOutOfStock}
           id={`add-to-cart-${product.id}`}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-[Outfit,sans-serif] font-semibold transition-all duration-200 ${
+          className={`w-full flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-[Outfit,sans-serif] font-semibold transition-all duration-200 ${
             isOutOfStock
               ? 'bg-brand-light-gray text-brand-gray cursor-not-allowed'
               : added

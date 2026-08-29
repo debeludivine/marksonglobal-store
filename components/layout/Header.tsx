@@ -56,20 +56,20 @@ export default function Header() {
       }`}
     >
       {/* Top announcement bar */}
-      <div className="bg-brand-emerald text-white text-xs text-center py-2 px-4 font-[Inter,sans-serif]">
-        🚚 Free delivery on orders over ₦50,000 &nbsp;|&nbsp; 📞 Call us: 0800-MARKSON
+      <div className="bg-brand-emerald text-white text-[10px] sm:text-xs text-center py-1.5 px-3 font-[Inter,sans-serif] leading-tight">
+        🚚 Free delivery on orders over ₦50,000 &nbsp;|&nbsp; 📞 0800-MARKSON
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 md:h-20 gap-4">
+        <div className="flex items-center justify-between h-14 md:h-20 gap-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <Image
               src="/logo.jpg"
               alt="MarksonGlobal Stores"
-              width={140}
-              height={56}
-              className="h-10 md:h-12 w-auto object-contain"
+              width={120}
+              height={48}
+              className="h-8 md:h-12 w-auto object-contain"
               priority
             />
           </Link>
@@ -94,7 +94,7 @@ export default function Header() {
           {/* Search + Cart + User */}
           <div className="flex items-center gap-2">
             {/* Search Bar — Desktop */}
-            <form action="/search" className="hidden md:flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 focus-within:border-brand-emerald transition-colors">
+            <form action="/search" className="hidden md:flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2 gap-2 w-52 lg:w-80 focus-within:border-brand-emerald transition-colors">
               <Search size={16} className="text-brand-gray flex-shrink-0" />
               <input
                 type="text"
