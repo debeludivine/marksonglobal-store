@@ -48,26 +48,26 @@ const statCards = [
 
 export default function AdminDashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
       <div>
-        <h1 className="font-[Outfit,sans-serif] font-black text-2xl text-brand-charcoal mb-1">Dashboard Overview</h1>
-        <p className="text-brand-gray font-[Inter,sans-serif] text-sm">Here&apos;s what&apos;s happening with your store today.</p>
+        <h1 className="font-[Outfit,sans-serif] font-black text-xl sm:text-2xl text-brand-charcoal mb-1">Dashboard Overview</h1>
+        <p className="text-brand-gray font-[Inter,sans-serif] text-xs sm:text-sm">Here&apos;s what&apos;s happening with your store today.</p>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
         {statCards.map(({ label, value, icon: Icon, color, href }) => (
           <Link
             key={label}
             href={href}
-            className="card p-6 flex items-center gap-4 hover:-translate-y-0.5 transition-all duration-200 group"
+            className="card p-4 sm:p-6 flex items-center gap-3 sm:gap-4 hover:-translate-y-0.5 transition-all duration-200 group"
           >
-            <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0`}>
-              <Icon size={22} className="text-white" />
+            <div className={`${color} w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0`}>
+              <Icon size={18} className="text-white" />
             </div>
             <div>
-              <p className="text-brand-gray font-[Inter,sans-serif] text-xs uppercase tracking-wide">{label}</p>
-              <p className="font-[Outfit,sans-serif] font-black text-2xl text-brand-charcoal">{value}</p>
+              <p className="text-brand-gray font-[Inter,sans-serif] text-[10px] sm:text-xs uppercase tracking-wide">{label}</p>
+              <p className="font-[Outfit,sans-serif] font-black text-xl sm:text-2xl text-brand-charcoal">{value}</p>
             </div>
           </Link>
         ))}
@@ -75,13 +75,13 @@ export default function AdminDashboardPage() {
 
       {/* Products Table */}
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-brand-light-gray">
-          <h2 className="font-[Outfit,sans-serif] font-bold text-lg text-brand-charcoal">All Products</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-brand-light-gray">
+          <h2 className="font-[Outfit,sans-serif] font-bold text-base sm:text-lg text-brand-charcoal">All Products</h2>
           <Link
             href="/admin/dashboard/products"
-            className="btn-primary text-xs px-4 py-2"
+            className="btn-primary text-xs px-3 py-1.5 sm:px-4 sm:py-2"
           >
-            Manage Products
+            Manage
           </Link>
         </div>
         <div className="overflow-x-auto">
