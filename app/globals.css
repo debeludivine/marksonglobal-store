@@ -1,26 +1,293 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Register custom font utilities for Tailwind v4 */
+@utility font-heading {
+  font-family: 'Outfit', sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@utility font-body {
+  font-family: 'Inter', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ============================================================
+   MARKSONGLOBAL STORES — Design System (Tailwind CSS v4)
+   All brand tokens defined in @theme
+   ============================================================ */
+
+@theme {
+  /* Brand Colors */
+  --color-brand-emerald: #004B23;
+  --color-brand-emerald-light: #006B34;
+  --color-brand-emerald-dark: #003018;
+  --color-brand-gold: #D4AF37;
+  --color-brand-gold-light: #E8CB5A;
+  --color-brand-gold-dark: #A8891F;
+  --color-brand-charcoal: #1A1A1A;
+  --color-brand-offwhite: #F8F9FA;
+  --color-brand-white: #FFFFFF;
+  --color-brand-gray: #6B7280;
+  --color-brand-light-gray: #E5E7EB;
+
+  /* Typography */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Custom Animations */
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+  --animate-shimmer: shimmer 1.5s infinite;
+  --animate-bounce-subtle: bounceSub 1s ease-in-out infinite;
+  --animate-pulse-gold: pulseGold 2s ease-in-out infinite;
+
+  /* Keyframes */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+
+  @keyframes bounceSub {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @keyframes pulseGold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(212,175,55,0); }
+  }
+
+  /* Box Shadows */
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.15);
+  --shadow-gold: 0 4px 16px rgba(212,175,55,0.3);
+  --shadow-emerald: 0 4px 16px rgba(0,75,35,0.3);
+}
+
+/* ============================================================
+   Global Base Styles
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color-brand-charcoal);
+  background-color: var(--color-brand-offwhite);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* ============================================================
+   Component Classes
+   ============================================================ */
+
+.btn-primary {
+  background-color: var(--color-brand-emerald);
+  color: white;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: var(--shadow-emerald);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-brand-emerald-light);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background-color: var(--color-brand-emerald-dark);
+}
+
+.btn-gold {
+  background-color: var(--color-brand-gold);
+  color: var(--color-brand-charcoal);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: var(--shadow-gold);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.btn-gold:hover {
+  background-color: var(--color-brand-gold-light);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  border: 2px solid var(--color-brand-emerald);
+  color: var(--color-brand-emerald);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-brand-emerald);
+  color: white;
+}
+
+.card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.price-tag {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-brand-emerald);
+}
+
+.price-original {
+  color: var(--color-brand-gray);
+  text-decoration: line-through;
+  font-size: 0.875rem;
+}
+
+.discount-badge {
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.deal-badge {
+  background-color: var(--color-brand-gold);
+  color: var(--color-brand-charcoal);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--color-brand-charcoal);
+}
+
+@media (min-width: 768px) {
+  .section-title {
+    font-size: 1.875rem;
+  }
+}
+
+.section-subtitle {
+  color: var(--color-brand-gray);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.admin-nav-link:hover {
+  color: white;
+  background-color: rgba(255,255,255,0.1);
+}
+
+.admin-nav-link.active {
+  background-color: var(--color-brand-gold);
+  color: var(--color-brand-charcoal);
+}
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
+
+.hero-gradient {
+  background: linear-gradient(135deg, #004B23 0%, #006B34 50%, #003018 100%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(to right, var(--color-brand-gold), var(--color-brand-gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-fade-in {
+  animation: var(--animate-fade-in);
+}
+
+.animate-slide-up {
+  animation: var(--animate-slide-up);
+}
+
+.animate-shimmer {
+  animation: var(--animate-shimmer);
+  background: linear-gradient(to right, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
 }
