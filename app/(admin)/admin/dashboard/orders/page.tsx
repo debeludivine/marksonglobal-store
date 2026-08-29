@@ -1,6 +1,7 @@
 import { ShoppingBag, Clock } from 'lucide-react'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import OrderStatusDropdown from '@/components/admin/OrderStatusDropdown'
 
 export const metadata: Metadata = { title: 'Orders | Admin' }
 
@@ -80,9 +81,7 @@ export default async function AdminOrdersPage() {
                     {formatNaira(order.total_amount)}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                      {order.status}
-                    </span>
+                    <OrderStatusDropdown orderId={order.id} currentStatus={order.status} />
                   </td>
                   <td className="px-6 py-4 text-sm text-brand-gray font-[Inter,sans-serif] flex items-center gap-1.5">
                     <Clock size={13} />

@@ -1,5 +1,6 @@
 import { searchProducts } from '@/lib/api'
 import ProductGrid from '@/components/ui/ProductGrid'
+import FilterSortBar from '@/components/ui/FilterSortBar'
 import { Search } from 'lucide-react'
 import type { Metadata } from 'next'
 
@@ -15,7 +16,19 @@ export default async function SearchPage({
   const params = await searchParams
   const q = typeof params.q === 'string' ? params.q : ''
 
-  const results = q ? await searchProducts(q) : []
+  const sort = typeof params.sort === 'string' ? params.sort : 'newest'
+  const inStockOnly = params.inStock === 'true'
+
+  let results = q ? await searchProducts(q) : []
+  
+  if (inStockOnly) {
+    results = results.filter(p => p.stock_quantity > 0)
+  }
+  if (sort === 'price_asc') {
+    results.sort((a, b) => (a.discount_price ?? a.price) - (b.discount_price ?? b.price))
+  } else if (sort === 'price_desc') {
+    results.sort((a, b) => (b.discount_price ?? b.price) - (a.discount_price ?? a.price))
+  }
 
   return (
     <div className="min-h-screen">
@@ -36,6 +49,7 @@ export default async function SearchPage({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <FilterSortBar totalCount={results.length} />
         {results.length > 0 ? (
           <ProductGrid products={results} />
         ) : (

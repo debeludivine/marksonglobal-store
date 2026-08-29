@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import ProductGrid from '@/components/ui/ProductGrid'
-import { getCategoryBySlug, getProducts } from '@/lib/api'
+import FilterSortBar from '@/components/ui/FilterSortBar'
+import { getCategoryBySlug, getProductsWithFilter } from '@/lib/api'
 import type { Metadata } from 'next'
 
 type Props = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -17,13 +19,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const sParams = await searchParams
+  
   const category = await getCategoryBySlug(slug)
-
   if (!category) notFound()
 
-  const products = await getProducts(category.id)
+  const products = await getProductsWithFilter({
+    categoryId: category.id,
+    sort: typeof sParams.sort === 'string' ? sParams.sort : undefined,
+    inStockOnly: sParams.inStock === 'true',
+  })
 
   return (
     <div className="min-h-screen">
@@ -44,23 +51,14 @@ export default async function CategoryPage({ params }: Props) {
 
       {/* Products */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Sort bar */}
-        <div className="flex items-center justify-between mb-6 pb-5 border-b border-brand-light-gray">
-          <p className="text-sm text-brand-gray font-body">
-            Showing <span className="font-semibold text-brand-charcoal">{products.length}</span> products
-          </p>
-          <select
-            className="text-sm border border-brand-light-gray rounded-lg px-3 py-2 font-body bg-white text-brand-charcoal outline-none focus:border-brand-emerald transition-colors"
-            aria-label="Sort products"
-          >
-            <option>Sort: Featured</option>
-            <option>Price: Low to High</option>
-            <option>Price: High to Low</option>
-            <option>Deals First</option>
-          </select>
-        </div>
-
-        <ProductGrid products={products} />
+        <FilterSortBar totalCount={products.length} />
+        {products.length > 0 ? (
+          <ProductGrid products={products} />
+        ) : (
+          <div className="text-center py-20 text-brand-gray">
+            No products match your current filters.
+          </div>
+        )}
       </div>
     </div>
   )

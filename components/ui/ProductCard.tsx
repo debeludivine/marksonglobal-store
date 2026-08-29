@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, Eye, Star } from 'lucide-react'
+import Image from 'next/image'
+import { ShoppingCart, Star, Heart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { toggleWishlist } from '@/lib/customer-actions'
 import { type Product } from '@/lib/seed-data'
 
 type Props = {
   product: Product
+  isWishlisted?: boolean
 }
 
 function formatNaira(amount: number) {
@@ -18,8 +21,10 @@ function formatNaira(amount: number) {
   }).format(amount)
 }
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product, isWishlisted = false }: Props) {
   const [added, setAdded] = useState(false)
+  const [wishlisted, setWishlisted] = useState(isWishlisted)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -29,11 +34,20 @@ export default function ProductCard({ product }: Props) {
     setTimeout(() => setAdded(false), 1500)
   }
 
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setWishlistLoading(true)
+    const result = await toggleWishlist(product.id)
+    setWishlisted(result.wishlisted)
+    setWishlistLoading(false)
+  }
+
   const discountPercent = product.discount_price
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : null
 
   const isOutOfStock = product.stock_quantity === 0
+  const imageUrl = product.images?.[0] || null
 
   return (
     <Link
@@ -43,19 +57,24 @@ export default function ProductCard({ product }: Props) {
     >
       {/* Image Area */}
       <div className="relative bg-brand-offwhite h-36 sm:h-48 flex items-center justify-center overflow-hidden">
-        {/* Placeholder visual */}
-        <div className="text-5xl sm:text-6xl select-none">
-          {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
-        </div>
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 50vw, 25vw"
+          />
+        ) : (
+          <div className="text-5xl sm:text-6xl select-none">
+            {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-          {product.is_deal && (
-            <span className="deal-badge">🔥 Deal</span>
-          )}
-          {discountPercent && (
-            <span className="discount-badge">-{discountPercent}%</span>
-          )}
+          {product.is_deal && <span className="deal-badge">🔥 Deal</span>}
+          {discountPercent && <span className="discount-badge">-{discountPercent}%</span>}
           {isOutOfStock && (
             <span className="bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               Out of Stock
@@ -63,28 +82,31 @@ export default function ProductCard({ product }: Props) {
           )}
         </div>
 
-        {/* Quick view overlay */}
-        <div className="absolute inset-0 bg-brand-emerald/0 group-hover:bg-brand-emerald/5 transition-colors duration-300 flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white rounded-xl px-3 py-2 flex items-center gap-1.5 text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal shadow-card">
-            <Eye size={14} />
-            Quick View
-          </div>
-        </div>
+        {/* Wishlist button */}
+        <button
+          onClick={handleToggleWishlist}
+          disabled={wishlistLoading}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart
+            size={15}
+            className={wishlisted ? 'text-red-500 fill-red-500' : 'text-brand-gray'}
+          />
+        </button>
       </div>
 
       {/* Content */}
       <div className="p-3 sm:p-4 flex flex-col flex-1">
-        {/* Category */}
         <p className="text-xs text-brand-gray font-[Inter,sans-serif] mb-1.5 uppercase tracking-wide">
           {product.category_id === 'cat-electronics' ? 'Electronics' : 'Groceries'}
         </p>
 
-        {/* Name */}
         <h3 className="font-[Outfit,sans-serif] font-semibold text-brand-charcoal text-xs sm:text-sm leading-snug line-clamp-2 mb-2 sm:mb-3 flex-1">
           {product.name}
         </h3>
 
-        {/* Rating (static for now) */}
+        {/* Rating */}
         <div className="flex items-center gap-0.5 sm:gap-1 mb-2 sm:mb-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <Star
@@ -102,9 +124,7 @@ export default function ProductCard({ product }: Props) {
             {formatNaira(product.discount_price ?? product.price)}
           </span>
           {product.discount_price && (
-            <span className="price-original">
-              {formatNaira(product.price)}
-            </span>
+            <span className="price-original">{formatNaira(product.price)}</span>
           )}
         </div>
 

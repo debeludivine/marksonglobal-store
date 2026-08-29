@@ -105,3 +105,37 @@ export async function deleteProduct(id: string) {
   revalidatePath('/')
   return { success: true }
 }
+
+export async function updateOrderStatus(orderId: string, status: string) {
+  const supabase = await createAdminClient()
+  const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/dashboard/orders')
+  revalidatePath('/profile')
+  return { success: true }
+}
+
+export async function createCoupon(formData: FormData) {
+  const supabase = await createAdminClient()
+  const code = (formData.get('code') as string).toUpperCase().trim()
+  const { error } = await supabase.from('coupons').insert({
+    code,
+    type: formData.get('type') as string,
+    value: parseFloat(formData.get('value') as string),
+    min_order: parseFloat((formData.get('min_order') as string) || '0'),
+    max_uses: formData.get('max_uses') ? parseInt(formData.get('max_uses') as string, 10) : null,
+    expires_at: formData.get('expires_at') || null,
+    active: true,
+  })
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/dashboard/coupons')
+  return { success: true }
+}
+
+export async function deleteCoupon(id: string) {
+  const supabase = await createAdminClient()
+  const { error } = await supabase.from('coupons').delete().eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/dashboard/coupons')
+  return { success: true }
+}

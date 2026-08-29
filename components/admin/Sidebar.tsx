@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Categories', href: '/admin/dashboard/categories', icon: Tag },
   { label: "Today's Deals", href: '/admin/dashboard/deals', icon: Zap },
   { label: 'Orders', href: '/admin/dashboard/orders', icon: ShoppingBag },
+  { label: 'Coupons', href: '/admin/dashboard/coupons', icon: Tag },
 ]
 
 type Props = {

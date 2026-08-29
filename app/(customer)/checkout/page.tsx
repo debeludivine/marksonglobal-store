@@ -3,16 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle, Truck, Package, MapPin } from 'lucide-react'
+import { CheckCircle, Truck, Package, MapPin, Tag } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
-import { placeOrder } from '@/lib/checkout-actions'
+import { placeOrder, applyCoupon } from '@/lib/checkout-actions'
 
 function formatNaira(amount: number) {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount)
+  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
 }
 
 const STATES = ['Lagos', 'Abuja', 'Rivers', 'Oyo', 'Kano', 'Enugu', 'Others']
@@ -32,47 +28,54 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [finalOrderId, setFinalOrderId] = useState('')
 
   const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: 'Lagos',
-    delivery_method: 'delivery', // 'delivery' or 'pickup'
+    name: '', phone: '', address: '', city: '', state: 'Lagos', delivery_method: 'delivery',
   })
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('')
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
+  const [appliedDiscount, setAppliedDiscount] = useState(0)
+  const [couponMessage, setCouponMessage] = useState('')
 
   useEffect(() => {
     setMounted(true)
-    if (items.length === 0 && step !== 3) {
-      router.replace('/cart')
-    }
+    if (items.length === 0 && step !== 3) router.replace('/cart')
   }, [items, router, step])
 
   if (!mounted || (items.length === 0 && step !== 3)) return null
 
   const cartSubtotal = subtotal()
   const shippingFee = getShippingFee(form.state, cartSubtotal, form.delivery_method)
-  const totalAmount = cartSubtotal + shippingFee
+  const totalAmount = Math.max(0, cartSubtotal + shippingFee - appliedDiscount)
 
-  const handleSubmitDetails = (e: React.FormEvent) => {
-    e.preventDefault()
-    setStep(2) // Move to confirmation
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return
+    setApplyingCoupon(true)
+    const result = await applyCoupon(couponCode, cartSubtotal)
+    if (result.valid) {
+      setAppliedDiscount(result.discount)
+      setCouponMessage(result.message)
+    } else {
+      setAppliedDiscount(0)
+      setCouponMessage(result.message)
+    }
+    setApplyingCoupon(false)
   }
 
   const handlePlaceOrder = async () => {
     setLoading(true)
     setError('')
     const result = await placeOrder(
-      {
-        ...form,
-        total_amount: totalAmount,
-        shipping_fee: shippingFee,
-      },
-      items
+      { ...form, total_amount: cartSubtotal + shippingFee, shipping_fee: shippingFee },
+      items,
+      appliedDiscount > 0 ? couponCode : undefined
     )
 
     if (result.success) {
+      setFinalOrderId(result.orderId!)
       clearCart()
       setStep(3)
     } else {
@@ -82,6 +85,9 @@ export default function CheckoutPage() {
   }
 
   if (step === 3) {
+    const whatsappMsg = `Hello MarksonGlobal, I just placed an order (ID: #${finalOrderId.slice(0, 8)}). Please confirm.`
+    const whatsappUrl = `https://wa.me/2348000000000?text=${encodeURIComponent(whatsappMsg)}`
+
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 py-12">
         <CheckCircle size={80} className="text-brand-emerald mb-6 animate-pulse" />
@@ -91,23 +97,24 @@ export default function CheckoutPage() {
         <p className="text-brand-gray font-[Inter,sans-serif] mb-8 max-w-md">
           Thank you for shopping with MarksonGlobal Stores. We have received your order and will contact you shortly.
         </p>
-        <Link href="/" className="btn-primary">
-          Continue Shopping
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Link href="/" className="btn-primary">Continue Shopping</Link>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="btn-outline border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 flex items-center gap-2">
+            Message us on WhatsApp
+          </a>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-brand-offwhite">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <h1 className="font-[Outfit,sans-serif] font-black text-2xl md:text-3xl text-brand-charcoal mb-8">
-          Checkout
-        </h1>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <h1 className="font-[Outfit,sans-serif] font-black text-2xl md:text-3xl text-brand-charcoal mb-8">Checkout</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Main Content */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             {step === 1 ? (
               <div className="card p-6 animate-fade-in">
                 <div className="flex items-center gap-2 mb-6 border-b border-brand-light-gray pb-4">
@@ -115,8 +122,7 @@ export default function CheckoutPage() {
                   <h2 className="font-[Outfit,sans-serif] font-bold text-xl text-brand-charcoal">Delivery Details</h2>
                 </div>
                 
-                <form onSubmit={handleSubmitDetails} className="space-y-6">
-                  {/* Delivery Method Selection */}
+                <form onSubmit={(e) => { e.preventDefault(); setStep(2) }} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <label className={`cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-colors ${form.delivery_method === 'delivery' ? 'border-brand-emerald bg-brand-emerald/5' : 'border-brand-light-gray hover:border-brand-gray'}`}>
                       <input type="radio" name="method" value="delivery" checked={form.delivery_method === 'delivery'} onChange={(e) => setForm({...form, delivery_method: e.target.value})} className="sr-only" />
@@ -200,8 +206,8 @@ export default function CheckoutPage() {
                   {error && <p className="text-red-500 text-sm">{error}</p>}
 
                   <div className="pt-4">
-                    <button onClick={handlePlaceOrder} disabled={loading} className="w-full btn-primary py-3 disabled:opacity-50">
-                      {loading ? 'Processing...' : 'Place Order Now'}
+                    <button onClick={handlePlaceOrder} disabled={loading} className="w-full btn-primary py-3 disabled:opacity-50 text-lg">
+                      {loading ? 'Processing...' : `Place Order • ${formatNaira(totalAmount)}`}
                     </button>
                   </div>
                 </div>
@@ -210,7 +216,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="md:col-span-1">
+          <div className="lg:col-span-1">
             <div className="card p-6 sticky top-28">
               <h2 className="font-[Outfit,sans-serif] font-bold text-lg text-brand-charcoal mb-5 flex items-center gap-2">
                 <Package size={18} /> Order Summary
@@ -230,6 +236,30 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              {/* Coupon Section */}
+              <div className="border-t border-brand-light-gray py-4">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Promo Code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={appliedDiscount > 0}
+                    className="w-full border border-brand-light-gray rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-emerald uppercase disabled:opacity-60"
+                  />
+                  {appliedDiscount > 0 ? (
+                    <button onClick={() => { setAppliedDiscount(0); setCouponCode(''); setCouponMessage('') }} className="px-3 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200">Remove</button>
+                  ) : (
+                    <button onClick={handleApplyCoupon} disabled={applyingCoupon || !couponCode} className="px-4 bg-brand-charcoal text-white rounded-lg text-sm font-semibold hover:bg-black disabled:opacity-50">
+                      {applyingCoupon ? '...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+                {couponMessage && (
+                  <p className={`text-xs ${appliedDiscount > 0 ? 'text-green-600' : 'text-red-500'}`}>{couponMessage}</p>
+                )}
+              </div>
+
               <div className="border-t border-brand-light-gray pt-4 space-y-3 mb-5">
                 <div className="flex justify-between text-sm font-[Inter,sans-serif]">
                   <span className="text-brand-gray">Subtotal ({totalItems()} items)</span>
@@ -241,6 +271,12 @@ export default function CheckoutPage() {
                     {shippingFee === 0 ? 'FREE' : formatNaira(shippingFee)}
                   </span>
                 </div>
+                {appliedDiscount > 0 && (
+                  <div className="flex justify-between text-sm font-[Inter,sans-serif] text-brand-emerald">
+                    <span className="flex items-center gap-1"><Tag size={12}/> Discount</span>
+                    <span className="font-semibold">-{formatNaira(appliedDiscount)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-brand-light-gray pt-4">
