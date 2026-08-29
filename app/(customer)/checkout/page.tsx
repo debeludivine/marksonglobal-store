@@ -68,19 +68,33 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setLoading(true)
     setError('')
-    const result = await placeOrder(
-      { ...form, total_amount: cartSubtotal + shippingFee, shipping_fee: shippingFee },
-      items,
-      appliedDiscount > 0 ? couponCode : undefined
-    )
-
-    if (result.success) {
-      setFinalOrderId(result.orderId!)
+    
+    try {
+      const { v4: uuidv4 } = await import('uuid')
+      const { queueMutation } = await import('@/lib/network/localDb')
+      
+      const idempotencyKey = uuidv4()
+      const payload = {
+        idempotencyKey,
+        amount: cartSubtotal + shippingFee,
+        address: form.delivery_method === 'pickup' ? 'Store Pickup' : `${form.address}, ${form.city}, ${form.state}`,
+        items: items.map(i => ({
+          product_id: i.product.id,
+          quantity: i.quantity,
+          price: i.product.discount_price ?? i.product.price
+        }))
+      }
+      
+      // Fire and forget local queue for resilient background sync
+      await queueMutation('CHECKOUT', payload)
+      
+      setFinalOrderId(idempotencyKey)
       clearCart()
       setStep(3)
-    } else {
-      setError(result.error || 'Something went wrong')
+    } catch (err) {
+      setError('Could not queue checkout. Check storage.')
     }
+    
     setLoading(false)
   }
 
