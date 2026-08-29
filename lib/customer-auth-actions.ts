@@ -44,3 +44,24 @@ export async function logout() {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
 }
+
+export async function signInWithGoogle(origin: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  if (data.url) {
+    return { success: true, url: data.url }
+  }
+
+  return { success: false, error: 'Failed to initiate Google login' }
+}

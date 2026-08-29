@@ -3,22 +3,42 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, Search, Menu, X, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, User } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { createClient } from '@/lib/supabase/client'
+import { logout } from '@/lib/customer-auth-actions'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [session, setSession] = useState<any>(null)
+  
   const totalItems = useCartStore((s) => s.totalItems)
+  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+
+    // Fetch initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   const navLinks = [
     { label: 'Home', href: '/' },
@@ -71,7 +91,7 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Search + Cart */}
+          {/* Search + Cart + User */}
           <div className="flex items-center gap-2">
             {/* Search Bar — Desktop */}
             <form action="/search" className="hidden md:flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 focus-within:border-brand-emerald transition-colors">
@@ -93,6 +113,42 @@ export default function Header() {
             >
               <Search size={20} className="text-brand-charcoal" />
             </button>
+
+            {/* User Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="p-2.5 rounded-xl text-brand-charcoal hover:bg-brand-offwhite transition-colors"
+                aria-label="User menu"
+              >
+                <User size={20} />
+              </button>
+              
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-brand-light-gray py-2 z-50 animate-fade-in">
+                    {session ? (
+                      <>
+                        <Link href="/profile" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">My Profile</Link>
+                        <Link href="/admin/dashboard" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Admin Dashboard</Link>
+                        <div className="border-t border-brand-light-gray my-1"></div>
+                        <form action={logout}>
+                          <button type="submit" className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-brand-offwhite">Sign Out</button>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <Link href="/login" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Sign In</Link>
+                        <Link href="/register" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Create Account</Link>
+                        <div className="border-t border-brand-light-gray my-1"></div>
+                        <Link href="/admin/login" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-gray hover:bg-brand-offwhite">Admin Access</Link>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Cart */}
             <Link
