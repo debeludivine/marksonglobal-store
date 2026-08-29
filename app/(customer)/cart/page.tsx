@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
@@ -13,9 +14,14 @@ function formatNaira(amount: number) {
 }
 
 export default function CartPage() {
+  const [mounted, setMounted] = useState(false)
   const { items, removeItem, updateQty, clearCart, subtotal, totalItems } = useCartStore()
 
-  if (items.length === 0) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || items.length === 0) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
         <div className="text-7xl mb-6">🛒</div>

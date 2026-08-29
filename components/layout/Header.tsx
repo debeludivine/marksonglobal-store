@@ -10,9 +10,11 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const totalItems = useCartStore((s) => s.totalItems)
 
   useEffect(() => {
+    setMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
@@ -99,7 +101,7 @@ export default function Header() {
               aria-label="Shopping cart"
             >
               <ShoppingCart size={20} />
-              {totalItems() > 0 && (
+              {mounted && totalItems() > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-brand-gold text-brand-charcoal text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 animate-fade-in">
                   {totalItems()}
                 </span>
