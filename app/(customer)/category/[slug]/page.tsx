@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import ProductGrid from '@/components/ui/ProductGrid'
-import { MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/seed-data'
+import { getCategoryBySlug, getProducts } from '@/lib/api'
 import type { Metadata } from 'next'
 
 type Props = {
@@ -9,21 +9,21 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug)
+  const category = await getCategoryBySlug(slug)
   if (!category) return { title: 'Category Not Found' }
   return {
-    title: category.name,
+    title: `${category.name} | MarksonGlobal Stores`,
     description: `Shop ${category.name} at MarksonGlobal Stores. Quality products at great prices.`,
   }
 }
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug)
+  const category = await getCategoryBySlug(slug)
 
   if (!category) notFound()
 
-  const products = MOCK_PRODUCTS.filter((p) => p.category_id === category.id)
+  const products = await getProducts(category.id)
 
   return (
     <div className="min-h-screen">

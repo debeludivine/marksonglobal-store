@@ -2,9 +2,20 @@ import Link from 'next/link'
 import { ArrowRight, Zap, ShoppingBag, Cpu } from 'lucide-react'
 import HeroBanner from '@/components/ui/HeroBanner'
 import ProductGrid from '@/components/ui/ProductGrid'
-import { MOCK_DEALS, MOCK_GROCERIES, MOCK_ELECTRONICS, MOCK_CATEGORIES } from '@/lib/seed-data'
+import { getDeals, getProducts, getCategoryBySlug } from '@/lib/api'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [deals, grocCat, elecCat] = await Promise.all([
+    getDeals(),
+    getCategoryBySlug('groceries'),
+    getCategoryBySlug('electronics')
+  ])
+
+  const [groceries, electronics] = await Promise.all([
+    grocCat ? getProducts(grocCat.id) : [],
+    elecCat ? getProducts(elecCat.id) : []
+  ])
+
   return (
     <>
       {/* Hero */}
@@ -81,7 +92,7 @@ export default function HomePage() {
               View All <ArrowRight size={16} />
             </Link>
           </div>
-          <ProductGrid products={MOCK_DEALS} />
+          <ProductGrid products={deals} />
         </div>
       </section>
 
@@ -99,7 +110,7 @@ export default function HomePage() {
             See All <ArrowRight size={16} />
           </Link>
         </div>
-        <ProductGrid products={MOCK_ELECTRONICS} />
+        <ProductGrid products={electronics} />
       </section>
 
       {/* Groceries Showcase */}
@@ -117,7 +128,7 @@ export default function HomePage() {
               See All <ArrowRight size={16} />
             </Link>
           </div>
-          <ProductGrid products={MOCK_GROCERIES} />
+          <ProductGrid products={groceries} />
         </div>
       </section>
 

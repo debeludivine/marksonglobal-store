@@ -165,13 +165,14 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <button
+              <Link
+                href="/checkout"
                 id="proceed-to-checkout"
                 className="w-full btn-primary flex items-center justify-center gap-2 text-base"
               >
                 Proceed to Checkout
                 <ArrowRight size={18} />
-              </button>
+              </Link>
               <p className="text-center text-xs text-brand-gray font-[Inter,sans-serif] mt-3">
                 🔒 Secure & encrypted checkout
               </p>

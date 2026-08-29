@@ -1,5 +1,5 @@
 import ProductGrid from '@/components/ui/ProductGrid'
-import { MOCK_DEALS } from '@/lib/seed-data'
+import { getDeals } from '@/lib/api'
 import { Zap } from 'lucide-react'
 import type { Metadata } from 'next'
 
@@ -8,7 +8,9 @@ export const metadata: Metadata = {
   description: 'Shop the best deals on groceries and electronics at MarksonGlobal Stores.',
 }
 
-export default function DealsPage() {
+export default async function DealsPage() {
+  const deals = await getDeals()
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -21,13 +23,13 @@ export default function DealsPage() {
             </h1>
           </div>
           <p className="text-brand-gray font-[Inter,sans-serif] text-lg">
-            {MOCK_DEALS.length} exclusive deals — limited time only!
+            {deals.length} exclusive deals — limited time only!
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <ProductGrid products={MOCK_DEALS} />
+        <ProductGrid products={deals} />
       </div>
     </div>
   )

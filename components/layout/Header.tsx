@@ -74,15 +74,16 @@ export default function Header() {
           {/* Search + Cart */}
           <div className="flex items-center gap-2">
             {/* Search Bar — Desktop */}
-            <div className="hidden md:flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 focus-within:border-brand-emerald transition-colors">
+            <form action="/search" className="hidden md:flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2 gap-2 w-64 lg:w-80 focus-within:border-brand-emerald transition-colors">
               <Search size={16} className="text-brand-gray flex-shrink-0" />
               <input
                 type="text"
+                name="q"
                 placeholder="Search products..."
                 className="bg-transparent text-sm outline-none w-full text-brand-charcoal placeholder-brand-gray font-[Inter,sans-serif]"
                 aria-label="Search products"
               />
-            </div>
+            </form>
 
             {/* Search icon — Mobile */}
             <button
@@ -126,15 +127,16 @@ export default function Header() {
         {/* Mobile Search */}
         {searchOpen && (
           <div className="md:hidden pb-3 animate-slide-up">
-            <div className="flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2.5 gap-2">
+            <form action="/search" className="flex items-center bg-brand-offwhite border border-brand-light-gray rounded-xl px-3 py-2.5 gap-2">
               <Search size={16} className="text-brand-gray" />
               <input
                 type="text"
+                name="q"
                 placeholder="Search products..."
                 className="bg-transparent text-sm outline-none w-full text-brand-charcoal placeholder-brand-gray font-[Inter,sans-serif]"
                 autoFocus
               />
-            </div>
+            </form>
           </div>
         )}
       </div>

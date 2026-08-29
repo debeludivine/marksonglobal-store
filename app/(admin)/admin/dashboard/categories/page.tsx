@@ -1,18 +1,18 @@
-'use client'
+import { Tag, Plus, Pencil, ShoppingBag } from 'lucide-react'
+import { getCategories, getProducts } from '@/lib/api'
+import type { Metadata } from 'next'
 
-import { useState } from 'react'
-import { Tag, Plus, Pencil, Trash2, ShoppingBag, Cpu } from 'lucide-react'
-import { MOCK_PRODUCTS } from '@/lib/seed-data'
+export const metadata: Metadata = {
+  title: 'Categories | Admin Dashboard',
+}
 
-const defaultCategories = [
-  { id: 'cat-groceries', name: 'Groceries & Provisions', slug: 'groceries', icon: '🛒' },
-  { id: 'cat-electronics', name: 'Electronics', slug: 'electronics', icon: '📱' },
-]
+export default async function AdminCategoriesPage() {
+  const [categories, allProducts] = await Promise.all([
+    getCategories(),
+    getProducts()
+  ])
 
-export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState(defaultCategories)
-
-  const productCount = (catId: string) => MOCK_PRODUCTS.filter((p) => p.category_id === catId).length
+  const productCount = (catId: string) => allProducts.filter((p) => p.category_id === catId).length
 
   return (
     <div className="space-y-6">
@@ -32,7 +32,7 @@ export default function AdminCategoriesPage() {
         {categories.map((cat) => (
           <div key={cat.id} className="card p-6">
             <div className="flex items-start justify-between mb-4">
-              <div className="text-4xl">{cat.icon}</div>
+              <div className="text-4xl">{cat.slug === 'electronics' ? '📱' : '🛒'}</div>
               <div className="flex items-center gap-2">
                 <button className="p-1.5 rounded-lg hover:bg-brand-emerald/10 text-brand-emerald transition-colors" aria-label={`Edit ${cat.name}`}>
                   <Pencil size={15} />

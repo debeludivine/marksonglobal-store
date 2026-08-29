@@ -1,16 +1,8 @@
 import { ShoppingBag, Clock } from 'lucide-react'
 import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Orders | Admin' }
-
-// MOCK ORDERS — Replace with Supabase query: supabase.from('orders').select('*').order('created_at', { ascending: false })
-const MOCK_ORDERS = [
-  { id: 'ORD-001', recipient_name: 'Amaka Johnson', total_amount: 45500, status: 'delivered', created_at: '2026-08-25', items: 3 },
-  { id: 'ORD-002', recipient_name: 'Tunde Okafor', total_amount: 18000, status: 'shipped', created_at: '2026-08-27', items: 1 },
-  { id: 'ORD-003', recipient_name: 'Ngozi Chukwu', total_amount: 72000, status: 'processing', created_at: '2026-08-28', items: 5 },
-  { id: 'ORD-004', recipient_name: 'Emeka Nwosu', total_amount: 3500, status: 'pending', created_at: '2026-08-29', items: 1 },
-  { id: 'ORD-005', recipient_name: 'Fatima Abubakar', total_amount: 155000, status: 'paid', created_at: '2026-08-29', items: 2 },
-]
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -25,7 +17,31 @@ function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
 }
 
-export default function AdminOrdersPage() {
+export default async function AdminOrdersPage() {
+  const supabase = await createClient()
+  
+  // Fetch orders and their items count
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items (count)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching orders:', error)
+  }
+
+  const formattedOrders = orders?.map(order => ({
+    id: order.id,
+    recipient_name: order.recipient_name || 'Guest',
+    total_amount: order.total_amount,
+    status: order.status,
+    created_at: new Date(order.created_at).toLocaleDateString(),
+    items: order.order_items[0].count,
+  })) || []
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -34,7 +50,7 @@ export default function AdminOrdersPage() {
         </div>
         <div>
           <h1 className="font-[Outfit,sans-serif] font-black text-2xl text-brand-charcoal">Orders</h1>
-          <p className="text-brand-gray font-[Inter,sans-serif] text-sm">{MOCK_ORDERS.length} total orders</p>
+          <p className="text-brand-gray font-[Inter,sans-serif] text-sm">{formattedOrders.length} total orders</p>
         </div>
       </div>
 
@@ -49,10 +65,10 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-light-gray">
-              {MOCK_ORDERS.map((order) => (
+              {formattedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-brand-offwhite/50 transition-colors cursor-pointer">
                   <td className="px-6 py-4 font-[Outfit,sans-serif] font-semibold text-sm text-brand-emerald">
-                    #{order.id}
+                    #{order.id.slice(0, 8)}
                   </td>
                   <td className="px-6 py-4 font-[Inter,sans-serif] text-sm text-brand-charcoal font-medium">
                     {order.recipient_name}
@@ -74,14 +90,17 @@ export default function AdminOrdersPage() {
                   </td>
                 </tr>
               ))}
+              {formattedOrders.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-brand-gray font-[Inter,sans-serif]">
+                    No orders found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
-
-      <p className="text-center text-xs text-brand-gray font-[Inter,sans-serif]">
-        💡 Real-time orders will appear here once connected to Supabase and a payment provider.
-      </p>
     </div>
   )
 }

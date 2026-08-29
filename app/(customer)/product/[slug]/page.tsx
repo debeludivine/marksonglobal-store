@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ShoppingCart, ArrowLeft, Package, CheckCircle } from 'lucide-react'
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from '@/lib/seed-data'
+import { getProductBySlug, getCategories, getProducts } from '@/lib/api'
 import type { Metadata } from 'next'
 import AddToCartButton from '@/components/ui/AddToCartButton'
 
@@ -11,7 +11,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const product = MOCK_PRODUCTS.find((p) => p.slug === slug)
+  const product = await getProductBySlug(slug)
   if (!product) return { title: 'Product Not Found' }
   return {
     title: product.name,
@@ -29,13 +29,14 @@ function formatNaira(amount: number) {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params
-  const product = MOCK_PRODUCTS.find((p) => p.slug === slug)
+  const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const category = MOCK_CATEGORIES.find((c) => c.id === product.category_id)
-  const related = MOCK_PRODUCTS.filter(
-    (p) => p.category_id === product.category_id && p.id !== product.id
-  ).slice(0, 4)
+  const categories = await getCategories()
+  const category = categories.find((c) => c.id === product.category_id)
+  
+  const allProducts = await getProducts(product.category_id)
+  const related = allProducts.filter((p) => p.id !== product.id).slice(0, 4)
 
   const discountPercent = product.discount_price
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
