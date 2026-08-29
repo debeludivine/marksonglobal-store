@@ -18,7 +18,9 @@ export async function placeOrder(orderData: any, items: any[]) {
     total_amount: orderData.total_amount,
     shipping_fee: orderData.shipping_fee,
     payment_reference: null,
-    shipping_address: `${orderData.address}, ${orderData.city}, ${orderData.state}`,
+    shipping_address: orderData.delivery_method === 'pickup' 
+      ? 'Store Pickup' 
+      : `${orderData.address}, ${orderData.city}, ${orderData.state}`,
     recipient_name: orderData.name,
     recipient_phone: orderData.phone,
   })

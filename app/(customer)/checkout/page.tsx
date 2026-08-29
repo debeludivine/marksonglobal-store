@@ -16,7 +16,8 @@ function formatNaira(amount: number) {
 }
 
 const STATES = ['Lagos', 'Abuja', 'Rivers', 'Oyo', 'Kano', 'Enugu', 'Others']
-const getShippingFee = (state: string, subtotal: number) => {
+const getShippingFee = (state: string, subtotal: number, method: string) => {
+  if (method === 'pickup') return 0
   if (subtotal >= 50000) return 0
   if (state === 'Lagos') return 2000
   if (state === 'Abuja') return 3500
@@ -38,6 +39,7 @@ export default function CheckoutPage() {
     address: '',
     city: '',
     state: 'Lagos',
+    delivery_method: 'delivery', // 'delivery' or 'pickup'
   })
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function CheckoutPage() {
   if (!mounted || (items.length === 0 && step !== 3)) return null
 
   const cartSubtotal = subtotal()
-  const shippingFee = getShippingFee(form.state, cartSubtotal)
+  const shippingFee = getShippingFee(form.state, cartSubtotal, form.delivery_method)
   const totalAmount = cartSubtotal + shippingFee
 
   const handleSubmitDetails = (e: React.FormEvent) => {
@@ -87,7 +89,7 @@ export default function CheckoutPage() {
           Order Successful!
         </h1>
         <p className="text-brand-gray font-[Inter,sans-serif] mb-8 max-w-md">
-          Thank you for shopping with MarksonGlobal Stores. We have received your order and will contact you shortly regarding delivery.
+          Thank you for shopping with MarksonGlobal Stores. We have received your order and will contact you shortly.
         </p>
         <Link href="/" className="btn-primary">
           Continue Shopping
@@ -113,7 +115,21 @@ export default function CheckoutPage() {
                   <h2 className="font-[Outfit,sans-serif] font-bold text-xl text-brand-charcoal">Delivery Details</h2>
                 </div>
                 
-                <form onSubmit={handleSubmitDetails} className="space-y-4">
+                <form onSubmit={handleSubmitDetails} className="space-y-6">
+                  {/* Delivery Method Selection */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className={`cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-colors ${form.delivery_method === 'delivery' ? 'border-brand-emerald bg-brand-emerald/5' : 'border-brand-light-gray hover:border-brand-gray'}`}>
+                      <input type="radio" name="method" value="delivery" checked={form.delivery_method === 'delivery'} onChange={(e) => setForm({...form, delivery_method: e.target.value})} className="sr-only" />
+                      <Truck size={24} className={form.delivery_method === 'delivery' ? 'text-brand-emerald' : 'text-brand-gray'} />
+                      <span className={`font-[Outfit,sans-serif] font-semibold text-sm ${form.delivery_method === 'delivery' ? 'text-brand-emerald' : 'text-brand-gray'}`}>Delivery</span>
+                    </label>
+                    <label className={`cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-colors ${form.delivery_method === 'pickup' ? 'border-brand-emerald bg-brand-emerald/5' : 'border-brand-light-gray hover:border-brand-gray'}`}>
+                      <input type="radio" name="method" value="pickup" checked={form.delivery_method === 'pickup'} onChange={(e) => setForm({...form, delivery_method: e.target.value})} className="sr-only" />
+                      <Package size={24} className={form.delivery_method === 'pickup' ? 'text-brand-emerald' : 'text-brand-gray'} />
+                      <span className={`font-[Outfit,sans-serif] font-semibold text-sm ${form.delivery_method === 'pickup' ? 'text-brand-emerald' : 'text-brand-gray'}`}>Store Pickup (Free)</span>
+                    </label>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">Full Name</label>
@@ -123,22 +139,27 @@ export default function CheckoutPage() {
                       <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">Phone Number</label>
                       <input required type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald" placeholder="08012345678" />
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">Address</label>
-                      <input required type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald" placeholder="123 Main St" />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">City</label>
-                      <input required type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald" placeholder="Ikeja" />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">State</label>
-                      <select required value={form.state} onChange={e => setForm({...form, state: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald bg-white">
-                        {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
+                    
+                    {form.delivery_method === 'delivery' && (
+                      <>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">Address</label>
+                          <input required type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald" placeholder="123 Main St" />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">City</label>
+                          <input required type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald" placeholder="Ikeja" />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase">State</label>
+                          <select required value={form.state} onChange={e => setForm({...form, state: e.target.value})} className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-emerald bg-white">
+                            {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="pt-4">
+                  <div className="pt-2">
                     <button type="submit" className="w-full btn-primary py-3">Continue to Confirmation</button>
                   </div>
                 </form>
@@ -152,9 +173,13 @@ export default function CheckoutPage() {
                 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-[Outfit,sans-serif] font-semibold text-brand-gray uppercase mb-2">Delivery To</h3>
+                    <h3 className="text-sm font-[Outfit,sans-serif] font-semibold text-brand-gray uppercase mb-2">
+                      {form.delivery_method === 'pickup' ? 'Store Pickup By' : 'Delivery To'}
+                    </h3>
                     <p className="font-[Inter,sans-serif] text-sm text-brand-charcoal font-medium">{form.name} ({form.phone})</p>
-                    <p className="font-[Inter,sans-serif] text-sm text-brand-charcoal">{form.address}, {form.city}, {form.state}</p>
+                    {form.delivery_method === 'delivery' && (
+                      <p className="font-[Inter,sans-serif] text-sm text-brand-charcoal">{form.address}, {form.city}, {form.state}</p>
+                    )}
                     <button onClick={() => setStep(1)} className="text-brand-emerald text-xs font-semibold mt-2 hover:underline">Edit Details</button>
                   </div>
 
