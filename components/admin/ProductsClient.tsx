@@ -58,31 +58,47 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     setShowForm(true)
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSave = async () => {
-    setIsLoading(true)
-    
-    const formData = new FormData()
-    formData.append('name', form.name)
-    formData.append('description', form.description)
-    formData.append('price', form.price)
-    if (form.discount_price) formData.append('discount_price', form.discount_price)
-    formData.append('stock_quantity', form.stock_quantity)
-    formData.append('sku', form.sku)
-    formData.append('category_id', form.category_id)
-    formData.append('is_deal', form.is_deal.toString())
-    
-    if ((form as any).imageFile) {
-      formData.append('image', (form as any).imageFile)
+    try {
+      setIsLoading(true)
+      setSaveError(null)
+      
+      const formData = new FormData()
+      formData.append('name', form.name)
+      formData.append('description', form.description)
+      formData.append('price', form.price)
+      if (form.discount_price) formData.append('discount_price', form.discount_price)
+      formData.append('stock_quantity', form.stock_quantity)
+      formData.append('sku', form.sku)
+      formData.append('category_id', form.category_id)
+      formData.append('is_deal', form.is_deal.toString())
+      
+      if ((form as any).imageFile) {
+        formData.append('image', (form as any).imageFile)
+      }
+      
+      let result;
+      if (editTarget) {
+        result = await updateProduct(editTarget.id, formData)
+      } else {
+        result = await addProduct(formData)
+      }
+      
+      if (result && !result.success) {
+        setSaveError(result.error || 'Failed to save product.')
+        setIsLoading(false)
+        return
+      }
+      
+      setIsLoading(false)
+      setShowForm(false)
+    } catch (err: any) {
+      console.error(err)
+      setSaveError(err.message || 'An unexpected error occurred.')
+      setIsLoading(false)
     }
-    
-    if (editTarget) {
-      await updateProduct(editTarget.id, formData)
-    } else {
-      await addProduct(formData)
-    }
-    
-    setIsLoading(false)
-    setShowForm(false)
   }
 
   const handleDelete = async (id: string) => {
@@ -299,6 +315,15 @@ export default function ProductsClient({ initialProducts, categories }: { initia
                 <span className="text-sm font-[Inter,sans-serif] text-brand-charcoal">Mark as Today&apos;s Deal 🔥</span>
               </div>
             </div>
+            
+            {saveError && (
+              <div className="px-6 pb-4">
+                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200">
+                  {saveError}
+                </div>
+              </div>
+            )}
+            
             <div className="flex gap-3 px-6 pb-6">
               <button onClick={() => setShowForm(false)} disabled={isLoading} className="flex-1 btn-outline py-2.5">Cancel</button>
               <button onClick={handleSave} disabled={isLoading} id="admin-save-product" className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-50">
