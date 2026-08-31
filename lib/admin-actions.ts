@@ -30,7 +30,7 @@ export async function addProduct(formData: FormData) {
     is_deal: formData.get('is_deal') === 'true',
     slug: name.toLowerCase().replace(/\s+/g, '-'),
     images: imageUrl ? [imageUrl] : [],
-    specifications: null,
+    specifications: formData.get('specifications') ? JSON.parse(formData.get('specifications') as string) : null,
   })
 
   if (error) {
@@ -73,6 +73,7 @@ export async function updateProduct(id: string, formDataOrData: any) {
       sku: formDataOrData.get('sku') as string,
       category_id: formDataOrData.get('category_id') as string,
       is_deal: formDataOrData.get('is_deal') === 'true',
+      specifications: formDataOrData.get('specifications') ? JSON.parse(formDataOrData.get('specifications') as string) : null,
     }
     if (imageUrl) {
       updateData.images = [imageUrl]
@@ -98,6 +99,21 @@ export async function deleteProduct(id: string) {
 
   if (error) {
     console.error('Error deleting product:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/dashboard/products')
+  revalidatePath('/')
+  return { success: true }
+}
+
+export async function batchDeleteProducts(ids: string[]) {
+  const supabase = await createAdminClient()
+  
+  const { error } = await supabase.from('products').delete().in('id', ids)
+
+  if (error) {
+    console.error('Error batch deleting products:', error)
     return { success: false, error: error.message }
   }
 
