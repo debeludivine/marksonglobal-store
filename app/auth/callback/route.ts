@@ -3,6 +3,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseUrl, getSupabaseAnonKey } from '@/lib/supabase/config'
 
+const ADMIN_EMAIL = 'debeludivine@gmail.com'
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -27,14 +29,18 @@ export async function GET(request: Request) {
         },
       }
     )
-    
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error) {
+      // Check who just signed in and route accordingly
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email?.toLowerCase() === ADMIN_EMAIL) {
+        return NextResponse.redirect(`${origin}/admin/dashboard`)
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
 
-  // return the user to an error page with instructions
   return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`)
 }
