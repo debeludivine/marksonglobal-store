@@ -4,7 +4,7 @@ import FilterSortBar from '@/components/ui/FilterSortBar'
 import { getCategoryBySlug, getProductsWithFilter } from '@/lib/api'
 import type { Metadata } from 'next'
 
-export const revalidate = 900; // 15 minutes ISR
+export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ slug: string }>

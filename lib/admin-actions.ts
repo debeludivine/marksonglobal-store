@@ -66,14 +66,22 @@ export async function generateProductDetailsAction(productName: string) {
 export async function addProduct(formData: FormData) {
   const supabase = await createAdminClient()
   
-  let imageUrl = ''
-  const image = formData.get('image') as File
-  if (image && image.size > 0) {
-    const filename = `${Date.now()}-${image.name.replace(/\s+/g, '-')}`
-    const { data, error: uploadError } = await supabase.storage.from('product-images').upload(filename, image)
-    if (!uploadError && data) {
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path)
-      imageUrl = publicUrl
+  const imageUrls: string[] = []
+  const images = formData.getAll('images') as File[]
+  
+  for (const image of images) {
+    if (image && image.size > 0) {
+      const ext = image.type === 'image/webp' ? '.webp' : image.type === 'image/png' ? '.png' : '.jpg'
+      const baseName = image.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-')
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName}${ext}`
+      const { data, error: uploadError } = await supabase.storage.from('product-images').upload(filename, image, {
+        contentType: image.type || 'image/webp',
+        upsert: true,
+      })
+      if (!uploadError && data) {
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path)
+        imageUrls.push(publicUrl)
+      }
     }
   }
 
@@ -89,7 +97,7 @@ export async function addProduct(formData: FormData) {
     category_id: formData.get('category_id') as string,
     is_deal: formData.get('is_deal') === 'true',
     slug: name.toLowerCase().replace(/\s+/g, '-'),
-    images: imageUrl ? [imageUrl] : [],
+    images: imageUrls,
     specifications: formData.get('specifications') ? JSON.parse(formData.get('specifications') as string) : null,
   })
 
@@ -99,7 +107,7 @@ export async function addProduct(formData: FormData) {
   }
 
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -112,17 +120,30 @@ export async function updateProduct(id: string, formDataOrData: any) {
   if (!(formDataOrData instanceof FormData)) {
     updateData = formDataOrData
   } else {
-    // Handle FormData
-    let imageUrl = ''
-    const image = formDataOrData.get('image') as File
-    if (image && image.size > 0) {
-      const filename = `${Date.now()}-${image.name.replace(/\s+/g, '-')}`
-      const { data, error: uploadError } = await supabase.storage.from('product-images').upload(filename, image)
-      if (!uploadError && data) {
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path)
-        imageUrl = publicUrl
+    // Handle FormData - upload any new image files
+    const newImageUrls: string[] = []
+    const images = formDataOrData.getAll('images') as File[]
+    
+    for (const image of images) {
+      if (image && image.size > 0) {
+        const ext = image.type === 'image/webp' ? '.webp' : image.type === 'image/png' ? '.png' : '.jpg'
+        const baseName = image.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-')
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName}${ext}`
+        const { data, error: uploadError } = await supabase.storage.from('product-images').upload(filename, image, {
+          contentType: image.type || 'image/webp',
+          upsert: true,
+        })
+        if (!uploadError && data) {
+          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path)
+          newImageUrls.push(publicUrl)
+        }
       }
     }
+
+    // Merge existing remote images + newly uploaded ones
+    const existingImagesStr = formDataOrData.get('existing_images') as string | null
+    const existingImages: string[] = existingImagesStr ? JSON.parse(existingImagesStr) : []
+    const mergedImages = [...existingImages, ...newImageUrls]
     
     updateData = {
       name: formDataOrData.get('name') as string,
@@ -134,9 +155,7 @@ export async function updateProduct(id: string, formDataOrData: any) {
       category_id: formDataOrData.get('category_id') as string,
       is_deal: formDataOrData.get('is_deal') === 'true',
       specifications: formDataOrData.get('specifications') ? JSON.parse(formDataOrData.get('specifications') as string) : null,
-    }
-    if (imageUrl) {
-      updateData.images = [imageUrl]
+      images: mergedImages,
     }
   }
   
@@ -148,7 +167,7 @@ export async function updateProduct(id: string, formDataOrData: any) {
   }
 
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -163,7 +182,7 @@ export async function deleteProduct(id: string) {
   }
 
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -178,7 +197,7 @@ export async function batchDeleteProducts(ids: string[]) {
   }
 
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -231,7 +250,7 @@ export async function createCategory(formData: FormData) {
   if (error) return { success: false, error: error.message }
   
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -246,7 +265,7 @@ export async function deleteCategory(id: string) {
   }
   
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -279,6 +298,6 @@ export async function deleteCategoryWithOptions(id: string, mode: 'relocate' | '
   }
   
   revalidatePath('/admin/dashboard/products')
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   return { success: true }
 }

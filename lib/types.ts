@@ -3,6 +3,7 @@ export type Category = {
   name: string
   slug: string
   icon_url: string | null
+  parent_id?: string | null
   created_at?: string
 }
 
@@ -20,6 +21,7 @@ export type Product = {
   images: string[]
   specifications: Record<string, string> | null
   created_at?: string
+  categories?: Category | null
 }
 
 export type Order = {

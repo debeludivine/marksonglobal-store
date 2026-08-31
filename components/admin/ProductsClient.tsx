@@ -2,13 +2,22 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle, Sparkles } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle, Sparkles, Loader2, Zap } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
 import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategoryWithOptions, generateProductDetailsAction } from '@/lib/admin-actions'
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
+}
+
+function formatBytes(bytes: number, decimals = 0) {
+  if (!bytes || bytes === 0) return '0 KB'
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
 const CATEGORY_TEMPLATES: Record<string, string[]> = {
@@ -76,9 +85,14 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     sku: '',
     category_id: currentFolder || (categories.length > 0 ? categories[0].id : ''),
     is_deal: false,
-    imageFile: null as File | null,
-    imagePreview: '',
   })
+
+  // Multi-image state & Compression tracking
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [imageMeta, setImageMeta] = useState<{ size: number, originalSize: number }[]>([])
+  const [isCompressingImages, setIsCompressingImages] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   
   // Category Form state
   const [showCategoryForm, setShowCategoryForm] = useState(false)
@@ -120,9 +134,12 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     setEditTarget(null)
     setSaveError(null)
     const defaultCat = currentFolder || (categories.length > 0 ? categories[0].id : '')
-    setForm({ name: '', description: '', price: '', discount_price: '', stock_quantity: '', sku: '', category_id: defaultCat, is_deal: false, imageFile: null, imagePreview: '' })
+    setForm({ name: '', description: '', price: '', discount_price: '', stock_quantity: '', sku: '', category_id: defaultCat, is_deal: false })
     prepareFormCategory(defaultCat)
     setSpecs([])
+    setImageFiles([])
+    setImagePreviews([])
+    setImageMeta([])
     setShowForm(true)
   }
 
@@ -138,10 +155,12 @@ export default function ProductsClient({ initialProducts, categories }: { initia
       sku: p.sku || '',
       category_id: p.category_id,
       is_deal: p.is_deal,
-      imageFile: null,
-      imagePreview: p.images?.[0] || '',
     })
     prepareFormCategory(p.category_id)
+    // Pre-load existing images as previews (no File objects — they're remote URLs)
+    setImageFiles([])
+    setImagePreviews(p.images || [])
+    setImageMeta((p.images || []).map(() => ({ size: 0, originalSize: 0 })))
     
     if (p.specifications) {
       const parsedSpecs = Object.entries(p.specifications).map(([key, value]) => ({ key, value: String(value) }))
@@ -161,6 +180,71 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     const newSpecs = templateKeys.filter(k => !existingKeys.includes(k)).map(k => ({ key: k, value: '' }))
     
     setSpecs([...specs, ...newSpecs])
+  }
+
+  const handleImageFilesChange = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const MAX = 6
+    const existing = imagePreviews.length
+    const allowedCount = MAX - existing
+    if (allowedCount <= 0) {
+      alert('Maximum 6 images allowed.')
+      return
+    }
+    
+    const toAdd = Array.from(files).slice(0, allowedCount)
+    setIsCompressingImages(true)
+
+    const compressionOptions = {
+      maxSizeMB: 0.35, // Compress to max 350KB
+      maxWidthOrHeight: 1200, // Max dimension 1200px for sharp high-DPI displays
+      useWebWorker: true,
+      fileType: 'image/webp', // Auto-convert to high-efficiency WebP format
+      initialQuality: 0.85,
+    }
+
+    try {
+      for (const file of toAdd) {
+        const originalSize = file.size
+        let compressedFile: File
+        try {
+          const compressedBlob = await imageCompression(file, compressionOptions)
+          // Create File object with .webp extension for consistent headers
+          const webpName = file.name.replace(/\.[^/.]+$/, '') + '.webp'
+          compressedFile = new File([compressedBlob], webpName, { type: 'image/webp' })
+        } catch (compressionErr) {
+          console.warn('Compression fallback to original image', compressionErr)
+          compressedFile = file
+        }
+
+        const previewUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = (e) => resolve(e.target?.result as string)
+          reader.readAsDataURL(compressedFile)
+        })
+
+        setImageFiles(prev => [...prev, compressedFile])
+        setImagePreviews(prev => [...prev, previewUrl])
+        setImageMeta(prev => [...prev, { size: compressedFile.size, originalSize }])
+      }
+    } catch (err) {
+      console.error('Image compression error:', err)
+    } finally {
+      setIsCompressingImages(false)
+    }
+  }
+
+  const removeImage = (idx: number) => {
+    const existingRemoteCount = editTarget ? (editTarget.images || []).filter(url => imagePreviews.includes(url)).length : 0
+    const isRemote = idx < existingRemoteCount
+
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx))
+    setImageMeta(prev => prev.filter((_, i) => i !== idx))
+
+    if (!isRemote) {
+      const localFileIndex = idx - existingRemoteCount
+      setImageFiles(prev => prev.filter((_, i) => i !== localFileIndex))
+    }
   }
 
   const handleAIGenerate = async () => {
@@ -217,15 +301,17 @@ export default function ProductsClient({ initialProducts, categories }: { initia
         formData.append('specifications', JSON.stringify(specsObj))
       }
       
-      if (form.imageFile) {
-        const options = { maxSizeMB: 0.3, maxWidthOrHeight: 1024, useWebWorker: true }
-        try {
-          const compressedFile = await imageCompression(form.imageFile, options)
-          formData.append('image', compressedFile)
-        } catch (error) {
-          console.error("Compression error, uploading original", error)
-          formData.append('image', form.imageFile)
-        }
+      // Append all pre-compressed image files (already compressed to WebP on selection)
+      for (const file of imageFiles) {
+        formData.append('images', file)
+      }
+
+      // Pass existing remote URLs for edit mode so server can merge them
+      const existingRemoteUrls = editTarget 
+        ? imagePreviews.filter(p => p.startsWith('http'))
+        : []
+      if (existingRemoteUrls.length > 0) {
+        formData.append('existing_images', JSON.stringify(existingRemoteUrls))
       }
       
       let result;
@@ -715,6 +801,115 @@ export default function ProductsClient({ initialProducts, categories }: { initia
                   <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1 uppercase tracking-wide">Description</label>
                   <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Provide a detailed description..." className="w-full border border-brand-light-gray rounded-xl px-4 py-3 text-sm outline-none focus:border-brand-emerald resize-none" />
                 </div>
+              </div>
+
+              {/* Multi-Image Upload */}
+              <div className="bg-brand-offwhite rounded-2xl p-4 border border-brand-light-gray">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-[Outfit,sans-serif] font-bold text-sm text-brand-charcoal flex items-center gap-2">
+                      <ImageIcon size={14} /> Product Images
+                    </h3>
+                    <p className="text-[10px] text-brand-gray font-[Inter,sans-serif] uppercase tracking-wider mt-0.5 flex items-center gap-1">
+                      <span>Up to 6 images — Auto-compressed to WebP</span>
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-brand-gray bg-white border border-brand-light-gray px-2 py-1 rounded-full">
+                    {imagePreviews.length} / 6
+                  </span>
+                </div>
+
+                {/* Compression In-Progress Banner */}
+                {isCompressingImages && (
+                  <div className="mb-3 flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs animate-pulse">
+                    <Loader2 size={16} className="animate-spin text-emerald-600 shrink-0" />
+                    <span className="font-semibold">Optimizing & compressing image(s) to high-speed WebP...</span>
+                  </div>
+                )}
+
+                {/* Drag & Drop Zone */}
+                {imagePreviews.length < 6 && (
+                  <label
+                    htmlFor="multi-image-input"
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleImageFilesChange(e.dataTransfer.files) }}
+                    className={`flex flex-col items-center justify-center gap-2 w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${
+                      isDragging ? 'border-brand-emerald bg-brand-emerald/10' : 'border-brand-light-gray hover:border-brand-emerald hover:bg-brand-emerald/5'
+                    }`}
+                  >
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-brand-light-gray shadow-sm">
+                      <ImageIcon size={18} className="text-brand-emerald" />
+                    </div>
+                    <p className="text-xs font-semibold text-brand-charcoal">
+                      {isDragging ? 'Drop images here!' : 'Click to upload or drag & drop'}
+                    </p>
+                    <p className="text-[10px] text-brand-gray">PNG, JPG, WEBP — Instant auto-compression</p>
+                    <input
+                      id="multi-image-input"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={isCompressingImages}
+                      onChange={(e) => handleImageFilesChange(e.target.files)}
+                    />
+                  </label>
+                )}
+
+                {/* Image Previews Grid */}
+                {imagePreviews.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2.5">
+                    {imagePreviews.map((src, idx) => {
+                      const meta = imageMeta[idx]
+                      const hasSavings = meta && meta.originalSize > meta.size && meta.size > 0
+                      const savedPercent = hasSavings ? Math.round((1 - meta.size / meta.originalSize) * 100) : 0
+
+                      return (
+                        <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-brand-light-gray bg-white shadow-xs">
+                          <img src={src} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                          
+                          {/* Badges Overlay */}
+                          <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 items-start pointer-events-none">
+                            {idx === 0 && (
+                              <span className="bg-brand-emerald text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm">
+                                COVER
+                              </span>
+                            )}
+                            {meta && meta.size > 0 && (
+                              <span className="bg-black/75 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm">
+                                <Zap size={9} className="text-amber-400 fill-amber-400" />
+                                {formatBytes(meta.size)}
+                                {hasSavings && (
+                                  <span className="text-emerald-400 text-[8px]">
+                                    (-{savedPercent}%)
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-md"
+                            title="Remove image"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {/* Add More Slot */}
+                    {imagePreviews.length < 6 && (
+                      <label htmlFor="multi-image-input" className="aspect-square rounded-xl border-2 border-dashed border-brand-light-gray flex flex-col items-center justify-center cursor-pointer hover:border-brand-emerald hover:bg-brand-emerald/5 transition-all">
+                        <Plus size={18} className="text-brand-gray" />
+                        <span className="text-[9px] font-semibold text-brand-gray mt-1">Add More</span>
+                      </label>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Dynamic Specifications Builder */}

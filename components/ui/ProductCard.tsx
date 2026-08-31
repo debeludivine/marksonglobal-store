@@ -6,7 +6,7 @@ import { AdaptiveImage } from './AdaptiveImage'
 import { ShoppingCart, Star, Heart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { toggleWishlist } from '@/lib/customer-actions'
-import { type Product } from '@/lib/seed-data'
+import { type Product } from '@/lib/types'
 
 type Props = {
   product: Product
@@ -108,8 +108,8 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
 
       {/* Content */}
       <div className="p-3 sm:p-4 flex flex-col flex-1">
-        <p className="text-xs text-brand-gray font-[Inter,sans-serif] mb-1.5 uppercase tracking-wide">
-          {product.category_id === 'cat-electronics' ? 'Electronics' : 'Groceries'}
+        <p className="text-xs text-brand-gray font-[Inter,sans-serif] mb-1.5 uppercase tracking-wide font-medium">
+          {product.categories?.name || 'Catalog'}
         </p>
 
         <h3 className="font-[Outfit,sans-serif] font-semibold text-brand-charcoal text-xs sm:text-sm leading-snug line-clamp-2 mb-2 sm:mb-3 flex-1">

@@ -15,10 +15,33 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
   return data as Category
 }
 
+export async function getCategoryDescendantIds(categoryId: string): Promise<string[]> {
+  const categories = await getCategories()
+  const result = new Set<string>([categoryId])
+  let added = true
+  while (added) {
+    added = false
+    for (const cat of categories) {
+      if (cat.parent_id && result.has(cat.parent_id) && !result.has(cat.id)) {
+        result.add(cat.id)
+        added = true
+      }
+    }
+  }
+  return Array.from(result)
+}
+
 export async function getProducts(categoryId?: string): Promise<Product[]> {
   const supabase = await createClient()
-  let query = supabase.from('products').select('*').order('created_at', { ascending: false })
-  if (categoryId) query = query.eq('category_id', categoryId)
+  let query = supabase.from('products').select('*, categories(*)').order('created_at', { ascending: false })
+  if (categoryId) {
+    const categoryIds = await getCategoryDescendantIds(categoryId)
+    if (categoryIds.length === 1) {
+      query = query.eq('category_id', categoryIds[0])
+    } else {
+      query = query.in('category_id', categoryIds)
+    }
+  }
   const { data, error } = await query
   if (error) { console.error('Error fetching products:', error); return [] }
   return data as Product[]
@@ -32,8 +55,15 @@ export async function getProductsWithFilter(options: {
   maxPrice?: number
 }): Promise<Product[]> {
   const supabase = await createClient()
-  let query = supabase.from('products').select('*')
-  if (options.categoryId) query = query.eq('category_id', options.categoryId)
+  let query = supabase.from('products').select('*, categories(*)')
+  if (options.categoryId) {
+    const categoryIds = await getCategoryDescendantIds(options.categoryId)
+    if (categoryIds.length === 1) {
+      query = query.eq('category_id', categoryIds[0])
+    } else {
+      query = query.in('category_id', categoryIds)
+    }
+  }
   if (options.inStockOnly) query = query.gt('stock_quantity', 0)
   if (options.minPrice) query = query.gte('price', options.minPrice)
   if (options.maxPrice) query = query.lte('price', options.maxPrice)
@@ -47,21 +77,26 @@ export async function getProductsWithFilter(options: {
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).single()
+  const { data, error } = await supabase.from('products').select('*, categories(*)').eq('slug', slug).single()
   if (error) return null
   return data as Product
 }
 
 export async function getDeals(): Promise<Product[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('products').select('*').eq('is_deal', true).order('created_at', { ascending: false })
+  const { data, error } = await supabase.from('products').select('*, categories(*)').eq('is_deal', true).order('created_at', { ascending: false })
   if (error) { console.error('Error fetching deals:', error); return [] }
   return data as Product[]
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('products').select('*').ilike('name', `%${query}%`).order('created_at', { ascending: false })
+  const cleanQ = query.trim()
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, categories(*)')
+    .or(`name.ilike.%${cleanQ}%,description.ilike.%${cleanQ}%,sku.ilike.%${cleanQ}%`)
+    .order('created_at', { ascending: false })
   if (error) { console.error('Error searching products:', error); return [] }
   return data as Product[]
 }
