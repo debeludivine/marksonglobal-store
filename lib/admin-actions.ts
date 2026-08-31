@@ -2,7 +2,7 @@
 
 import { createAdminClient } from './supabase/server'
 import { revalidatePath } from 'next/cache'
-import { generateProductDetails } from './ai-catalog'
+import { generateProductDetails, cleanPlainText } from './ai-catalog'
 
 export async function generateProductDetailsAction(productName: string) {
   try {
@@ -89,7 +89,7 @@ export async function addProduct(formData: FormData) {
 
   const { error } = await supabase.from('products').insert({
     name,
-    description: formData.get('description') as string,
+    description: cleanPlainText(formData.get('description') as string),
     price: parseFloat(formData.get('price') as string),
     discount_price: formData.get('discount_price') ? parseFloat(formData.get('discount_price') as string) : null,
     stock_quantity: parseInt(formData.get('stock_quantity') as string, 10),
@@ -147,7 +147,7 @@ export async function updateProduct(id: string, formDataOrData: any) {
     
     updateData = {
       name: formDataOrData.get('name') as string,
-      description: formDataOrData.get('description') as string,
+      description: cleanPlainText(formDataOrData.get('description') as string),
       price: parseFloat(formDataOrData.get('price') as string),
       discount_price: formDataOrData.get('discount_price') ? parseFloat(formDataOrData.get('discount_price') as string) : null,
       stock_quantity: parseInt(formDataOrData.get('stock_quantity') as string, 10),

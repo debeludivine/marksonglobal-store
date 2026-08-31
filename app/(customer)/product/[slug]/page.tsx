@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AdaptiveImage } from '@/components/ui/AdaptiveImage'
 import { CheckCircle } from 'lucide-react'
 import { getProductBySlug, getCategories, getProducts, getProductReviews } from '@/lib/api'
+import { cleanPlainText } from '@/lib/ai-catalog'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import AddToCartButton from '@/components/ui/AddToCartButton'
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await getProductBySlug(slug)
   if (!product) return { title: 'Product Not Found' }
-  return { title: product.name, description: product.description }
+  return { title: product.name, description: cleanPlainText(product.description) }
 }
 
 function formatNaira(amount: number) {
@@ -112,7 +113,9 @@ export default async function ProductPage({ params }: Props) {
               </div>
             )}
 
-            <p className="text-brand-gray font-body leading-relaxed mb-5 text-sm sm:text-base">{product.description}</p>
+            <p className="text-brand-gray font-body leading-relaxed mb-5 text-sm sm:text-base whitespace-pre-line">
+              {cleanPlainText(product.description)}
+            </p>
 
             <div className="flex items-baseline gap-3 mb-5 pb-5 border-b border-brand-light-gray">
               <span className="font-heading font-black text-2xl sm:text-3xl text-brand-emerald">

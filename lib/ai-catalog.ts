@@ -16,12 +16,30 @@ function getGeminiKey() {
   return keys[randomIndex]
 }
 
+export function cleanPlainText(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|ul|ol)>/gi, '\n\n')
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 const responseSchema = {
   type: Type.OBJECT,
   properties: {
     description: { 
       type: Type.STRING, 
-      description: "A rich, persuasive, SEO-optimized HTML description of the product (using basic html tags like <p>, <ul>, <strong>)." 
+      description: "A comprehensive, persuasive, clean plain text description of the product. Natural paragraphs only. Strictly DO NOT include any HTML tags (<p>, <strong>, <ul>, <li>, etc.) or raw markup." 
     },
     specifications: { 
       type: Type.ARRAY, 
@@ -68,7 +86,7 @@ export async function generateProductDetails(productName: string, existingCatego
   const prompt = `You are an expert e-commerce catalog manager.
 Product Name: "${productName}"
 
-We need to generate a rich HTML description, technical specifications (as a JSON key-value map), and determine the exact category path for this product.
+We need to generate a clear, compelling plain text description (strictly no HTML tags, no markup, just clean readable paragraphs), technical specifications (as key-value pairs), and determine the exact category path for this product.
 
 Here are the existing categories in our system:
 ${JSON.stringify(existingCategories, null, 2)}
@@ -101,13 +119,15 @@ Make sure to strictly adhere to the JSON schema.`
       })
 
       if (response.text) {
-        return JSON.parse(response.text) as AICatalogResult
+        const parsed = JSON.parse(response.text) as AICatalogResult
+        parsed.description = cleanPlainText(parsed.description)
+        return parsed
       }
     } catch (err: any) {
+      console.warn(`[AI Attempt ${attempt + 1}] Failed with model ${model}:`, err.message || err)
       lastError = err
-      console.warn(`AI attempt ${attempt + 1} with model ${model} failed:`, err?.message || err)
     }
   }
 
-  throw lastError || new Error('Failed to generate product details with AI')
+  throw new Error(`Failed to generate product details after 3 attempts: ${lastError?.message || 'Unknown error'}`)
 }
