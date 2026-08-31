@@ -4,8 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { login, signInWithGoogle } from '@/lib/customer-auth-actions'
-import { LogIn, ArrowRight, Lock, Mail, Eye, EyeOff, AlertCircle, ChevronDown, ShieldCheck, Star } from 'lucide-react'
+import { login } from '@/lib/customer-auth-actions'
+import { createClient } from '@/lib/supabase/client'
+import { ArrowRight, Lock, Mail, Eye, EyeOff, AlertCircle, ChevronDown, ShieldCheck, Star } from 'lucide-react'
 
 const ADMIN_EMAIL = 'debeludivine@gmail.com'
 
@@ -23,13 +24,19 @@ export default function UnifiedLoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true)
     setError('')
-    const result = await signInWithGoogle(window.location.origin)
-    if (result.success && result.url) {
-      window.location.href = result.url
-    } else {
-      setError(result.error || 'Failed to initiate Google login')
+    // Must run on the browser client so PKCE code_verifier is stored in localStorage
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      setError(error.message)
       setGoogleLoading(false)
     }
+    // On success, Supabase automatically redirects — no need to do anything
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

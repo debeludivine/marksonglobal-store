@@ -4,9 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { login } from '@/lib/customer-auth-actions'
-import { LogIn, ArrowRight } from 'lucide-react'
-
-import { signInWithGoogle } from '@/lib/customer-auth-actions'
+import { createClient } from '@/lib/supabase/client'
+import { ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const [error, setError] = useState('')
@@ -17,11 +16,16 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true)
     setError('')
-    const result = await signInWithGoogle(window.location.origin)
-    if (result.success && result.url) {
-      window.location.href = result.url
-    } else {
-      setError(result.error || 'Failed to initiate Google login')
+    // Must run on browser client so PKCE code_verifier is stored in localStorage
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      setError(error.message)
       setGoogleLoading(false)
     }
   }
