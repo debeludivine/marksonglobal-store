@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
-import { addProduct, updateProduct, deleteProduct, batchDeleteProducts } from '@/lib/admin-actions'
+import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory } from '@/lib/admin-actions'
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
@@ -72,6 +72,13 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     is_deal: false,
     imageFile: null as File | null,
     imagePreview: '',
+  })
+  
+  // Category Form state
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    parent_id: '',
   })
   
   // Cascading Form Categories
@@ -244,6 +251,32 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     setIsLoading(false)
   }
 
+  const handleSaveCategory = async () => {
+    try {
+      setIsLoading(true)
+      setSaveError(null)
+      
+      const formData = new FormData()
+      formData.append('name', categoryForm.name)
+      if (categoryForm.parent_id) {
+        formData.append('parent_id', categoryForm.parent_id)
+      }
+      
+      const result = await createCategory(formData)
+      if (result && !result.success) {
+        setSaveError(result.error || 'Failed to create category.')
+      } else {
+        setShowCategoryForm(false)
+        setCategoryForm({ name: '', parent_id: '' })
+      }
+    } catch (err: any) {
+      console.error(err)
+      setSaveError(err.message || 'An unexpected error occurred.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -262,6 +295,17 @@ export default function ProductsClient({ initialProducts, categories }: { initia
               Delete ({selectedIds.size})
             </button>
           )}
+          <button
+            onClick={() => {
+              setSaveError(null)
+              setCategoryForm({ name: '', parent_id: currentFolder || '' })
+              setShowCategoryForm(true)
+            }}
+            className="btn-outline flex items-center gap-2 py-2.5 px-4 flex-1 sm:flex-none justify-center border-brand-emerald text-brand-emerald hover:bg-brand-emerald/10"
+          >
+            <FolderPlus size={18} />
+            New Category
+          </button>
           <button
             onClick={openAdd}
             className="btn-primary flex items-center gap-2 py-2.5 px-4 flex-1 sm:flex-none justify-center"
@@ -677,6 +721,62 @@ export default function ProductsClient({ initialProducts, categories }: { initia
               </button>
               <button onClick={() => setDeleteTarget(null)} disabled={isLoading} className="w-full bg-brand-offwhite text-brand-charcoal font-[Outfit,sans-serif] font-bold py-3.5 rounded-xl hover:bg-brand-light-gray transition-colors">
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showCategoryForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-[Outfit,sans-serif] font-bold text-lg text-brand-charcoal">
+                New Category
+              </h2>
+              <button onClick={() => setShowCategoryForm(false)} className="p-2 rounded-lg hover:bg-brand-offwhite transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase tracking-wide">Category Name *</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  placeholder="e.g. Laptops"
+                  className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm font-[Inter,sans-serif] outline-none focus:border-brand-emerald"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1.5 uppercase tracking-wide">Place Inside Folder (Optional)</label>
+                <select
+                  value={categoryForm.parent_id}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, parent_id: e.target.value })}
+                  className="w-full border border-brand-light-gray rounded-xl px-4 py-2.5 text-sm font-[Inter,sans-serif] outline-none focus:border-brand-emerald bg-white"
+                >
+                  <option value="">Top Level (Root)</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {saveError && (
+              <div className="mt-4 bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-200">
+                {saveError}
+              </div>
+            )}
+            
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowCategoryForm(false)} disabled={isLoading} className="flex-1 btn-outline py-2.5">Cancel</button>
+              <button onClick={handleSaveCategory} disabled={isLoading || !categoryForm.name.trim()} className="flex-1 btn-primary py-2.5 disabled:opacity-50">
+                {isLoading ? 'Saving...' : 'Create'}
               </button>
             </div>
           </div>

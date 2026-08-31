@@ -155,3 +155,22 @@ export async function deleteCoupon(id: string) {
   revalidatePath('/admin/dashboard/coupons')
   return { success: true }
 }
+
+export async function createCategory(formData: FormData) {
+  const supabase = await createAdminClient()
+  const name = formData.get('name') as string
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+  const parent_id = formData.get('parent_id') as string | null
+  
+  const { error } = await supabase.from('categories').insert({
+    name,
+    slug,
+    parent_id: parent_id || null,
+  })
+  
+  if (error) return { success: false, error: error.message }
+  
+  revalidatePath('/admin/dashboard/products')
+  revalidatePath('/')
+  return { success: true }
+}
