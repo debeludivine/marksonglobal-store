@@ -176,12 +176,46 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function deleteCategory(id: string) {
+  // Keeping this for backwards compatibility if needed, but we'll use deleteCategoryWithOptions
   const supabase = await createAdminClient()
   const { error } = await supabase.from('categories').delete().eq('id', id)
   
   if (error) {
     console.error('Error deleting category:', error)
     return { success: false, error: error.message }
+  }
+  
+  revalidatePath('/admin/dashboard/products')
+  revalidatePath('/')
+  return { success: true }
+}
+
+export async function deleteCategoryWithOptions(id: string, mode: 'relocate' | 'cascade', targetId?: string) {
+  const supabase = await createAdminClient()
+  
+  if (mode === 'relocate' && targetId) {
+    // 1. Relocate products
+    await supabase.from('products').update({ category_id: targetId }).eq('category_id', id)
+    // 2. Relocate subcategories
+    await supabase.from('categories').update({ parent_id: targetId }).eq('parent_id', id)
+    // 3. Delete the category itself
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+  } else if (mode === 'cascade') {
+    // We will do a simple manual cascade for 1 level deep just in case DB constraints don't do it.
+    // Ideally the DB has ON DELETE CASCADE on foreign keys.
+    // 1. Delete products in this category
+    await supabase.from('products').delete().eq('category_id', id)
+    // 2. Get subcategories to delete their products too
+    const { data: subs } = await supabase.from('categories').select('id').eq('parent_id', id)
+    if (subs && subs.length > 0) {
+      const subIds = subs.map(s => s.id)
+      await supabase.from('products').delete().in('category_id', subIds)
+      await supabase.from('categories').delete().in('id', subIds)
+    }
+    // 3. Delete the category itself
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
   }
   
   revalidatePath('/admin/dashboard/products')

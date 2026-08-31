@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
-import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategory } from '@/lib/admin-actions'
+import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategoryWithOptions } from '@/lib/admin-actions'
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
@@ -23,6 +23,8 @@ export default function ProductsClient({ initialProducts, categories }: { initia
   const [editTarget, setEditTarget] = useState<Product | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<any | null>(null)
+  const [deleteMode, setDeleteMode] = useState<'cascade' | 'relocate'>('relocate')
+  const [relocateTargetId, setRelocateTargetId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -279,8 +281,13 @@ export default function ProductsClient({ initialProducts, categories }: { initia
   }
 
   const handleDeleteCategory = async (id: string) => {
+    if (deleteMode === 'relocate' && !relocateTargetId) {
+      alert("Please select a target folder to move contents to.")
+      return
+    }
+    
     setIsLoading(true)
-    const result = await deleteCategory(id)
+    const result = await deleteCategoryWithOptions(id, deleteMode, relocateTargetId)
     setIsLoading(false)
     if (result && !result.success) {
       alert(`Error deleting category: ${result.error}`)
@@ -811,25 +818,81 @@ export default function ProductsClient({ initialProducts, categories }: { initia
       {/* Delete Category Confirmation Modal */}
       {deleteCategoryTarget && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 sm:p-8 animate-fade-in text-center">
-            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={24} />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h2 className="font-[Outfit,sans-serif] font-black text-xl text-brand-charcoal">Delete Folder?</h2>
+                  <p className="text-brand-gray text-xs font-[Inter,sans-serif]">Deleting <strong className="text-brand-charcoal">{deleteCategoryTarget.name}</strong></p>
+                </div>
+              </div>
+              <button onClick={() => setDeleteCategoryTarget(null)} className="p-2 rounded-lg hover:bg-brand-offwhite text-brand-gray">
+                <X size={18} />
+              </button>
             </div>
-            <h2 className="font-[Outfit,sans-serif] font-black text-xl text-brand-charcoal mb-2">Delete Folder?</h2>
-            <p className="text-brand-gray text-sm font-[Inter,sans-serif] mb-8">
-              Are you sure you want to delete <strong className="text-brand-charcoal">{deleteCategoryTarget.name}</strong>? 
-              This will remove the category.
-            </p>
-            <div className="flex flex-col gap-3">
+            
+            <div className="space-y-4 mb-8">
+              <label className="flex gap-3 p-4 border border-brand-light-gray rounded-xl cursor-pointer hover:border-brand-emerald transition-colors">
+                <input 
+                  type="radio" 
+                  name="deleteMode" 
+                  checked={deleteMode === 'relocate'}
+                  onChange={() => setDeleteMode('relocate')}
+                  className="mt-1 accent-brand-emerald"
+                />
+                <div className="flex-1">
+                  <span className="block font-[Outfit,sans-serif] font-bold text-sm text-brand-charcoal mb-1">Only delete folder, keep contents</span>
+                  <p className="text-xs text-brand-gray">Move all products and sub-folders to another location.</p>
+                  
+                  {deleteMode === 'relocate' && (
+                    <div className="mt-3">
+                      <select 
+                        value={relocateTargetId} 
+                        onChange={(e) => setRelocateTargetId(e.target.value)}
+                        className="w-full border border-brand-light-gray rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-emerald bg-white"
+                      >
+                        <option value="">Select destination folder...</option>
+                        {categories.filter(c => c.id !== deleteCategoryTarget.id).map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </label>
+              
+              <label className="flex gap-3 p-4 border border-red-100 rounded-xl cursor-pointer hover:border-red-500 transition-colors bg-red-50/30">
+                <input 
+                  type="radio" 
+                  name="deleteMode" 
+                  checked={deleteMode === 'cascade'}
+                  onChange={() => setDeleteMode('cascade')}
+                  className="mt-1 accent-red-500"
+                />
+                <div>
+                  <span className="block font-[Outfit,sans-serif] font-bold text-sm text-red-600 mb-1 flex items-center gap-2">
+                    Delete folder and everything inside it <AlertTriangle size={14} />
+                  </span>
+                  <p className="text-xs text-red-500/80">This will permanently delete this category, all its subcategories, and all products within them. This action cannot be undone.</p>
+                </div>
+              </label>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button onClick={() => setDeleteCategoryTarget(null)} disabled={isLoading} className="btn-outline py-2.5 px-6 font-semibold">
+                Cancel
+              </button>
               <button
                 onClick={() => handleDeleteCategory(deleteCategoryTarget.id)}
-                disabled={isLoading}
-                className="w-full bg-red-500 text-white font-[Outfit,sans-serif] font-bold text-lg py-3.5 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+                disabled={isLoading || (deleteMode === 'relocate' && !relocateTargetId)}
+                className={`py-2.5 px-6 rounded-lg font-[Outfit,sans-serif] font-bold text-sm transition-colors text-white disabled:opacity-50 ${
+                  deleteMode === 'cascade' ? 'bg-red-500 hover:bg-red-600' : 'bg-brand-charcoal hover:bg-black'
+                }`}
               >
-                {isLoading ? 'Deleting...' : 'Yes, Delete it'}
-              </button>
-              <button onClick={() => setDeleteCategoryTarget(null)} disabled={isLoading} className="w-full bg-brand-offwhite text-brand-charcoal font-[Outfit,sans-serif] font-bold py-3.5 rounded-xl hover:bg-brand-light-gray transition-colors">
-                Cancel
+                {isLoading ? 'Processing...' : 'Confirm Deletion'}
               </button>
             </div>
           </div>
