@@ -24,8 +24,16 @@ const responseSchema = {
       description: "A rich, persuasive, SEO-optimized HTML description of the product (using basic html tags like <p>, <ul>, <strong>)." 
     },
     specifications: { 
-      type: Type.OBJECT, 
-      description: "Technical specifications. The key should be the feature name (e.g. 'RAM'), value is detail (e.g. '8GB'). Do not nest objects." 
+      type: Type.ARRAY, 
+      description: "Comprehensive key-value technical specifications for the product (e.g. RAM, Storage, Screen, Battery, Processor, Color, Camera, Warranty).",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          key: { type: Type.STRING, description: "Specification name, e.g. RAM, Storage, Battery" },
+          value: { type: Type.STRING, description: "Specification value, e.g. 12GB, 512GB, 5000mAh" }
+        },
+        required: ["key", "value"]
+      }
     },
     categoryPath: {
       type: Type.ARRAY,
@@ -47,7 +55,7 @@ const responseSchema = {
 
 export type AICatalogResult = {
   description: string;
-  specifications: Record<string, string>;
+  specifications: Array<{ key: string; value: string }>;
   categoryPath: Array<{
     action: 'use_existing' | 'create_new';
     id?: string;

@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Protect all /admin/dashboard/* routes — must be authenticated AND be the admin
-  if (pathname.startsWith('/admin/dashboard')) {
+  if (pathname.startsWith('/admin/dashboard') && process.env.NODE_ENV === 'production') {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'

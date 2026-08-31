@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle, Sparkles } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
@@ -18,6 +19,7 @@ const CATEGORY_TEMPLATES: Record<string, string[]> = {
 }
 
 export default function ProductsClient({ initialProducts, categories }: { initialProducts: Product[], categories: any[] }) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Product | null>(null)
@@ -174,7 +176,9 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     if (result.success && result.data) {
       const data = result.data
       
-      const newSpecs = Object.entries(data.specifications || {}).map(([key, value]) => ({ key, value: String(value) }))
+      const newSpecs = Array.isArray(data.specifications) 
+        ? data.specifications 
+        : Object.entries(data.specifications || {}).map(([key, value]) => ({ key, value: String(value) }))
       setSpecs(newSpecs)
       
       setForm(prev => ({
@@ -186,6 +190,7 @@ export default function ProductsClient({ initialProducts, categories }: { initia
       if (data.categoryId) {
         prepareFormCategory(data.categoryId)
       }
+      router.refresh()
     } else {
       alert(`AI Error: ${result.error}`)
     }
