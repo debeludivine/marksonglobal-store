@@ -813,7 +813,7 @@ export default function ProductsClient({ initialProducts, categories }: { initia
             </div>
           </div>
         </div>
-
+      )}
 
       {/* Delete Category Confirmation Modal */}
       {deleteCategoryTarget && (
