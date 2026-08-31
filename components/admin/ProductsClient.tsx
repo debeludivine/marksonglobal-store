@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
-import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory } from '@/lib/admin-actions'
+import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategory } from '@/lib/admin-actions'
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
@@ -22,6 +22,7 @@ export default function ProductsClient({ initialProducts, categories }: { initia
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Product | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -277,6 +278,21 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     }
   }
 
+  const handleDeleteCategory = async (id: string) => {
+    setIsLoading(true)
+    const result = await deleteCategory(id)
+    setIsLoading(false)
+    if (result && !result.success) {
+      alert(`Error deleting category: ${result.error}`)
+    } else {
+      setDeleteCategoryTarget(null)
+      // If we are currently inside the deleted folder, we should go back home
+      if (currentFolder === id) {
+        setCurrentFolder(null)
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -357,18 +373,27 @@ export default function ProductsClient({ initialProducts, categories }: { initia
       {!search && visibleCategories.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {visibleCategories.map(cat => (
-            <button
+            <div
               key={cat.id}
-              onClick={() => setCurrentFolder(cat.id)}
-              className="card p-4 flex flex-col items-center justify-center gap-3 hover:border-brand-emerald hover:shadow-md transition-all group aspect-square text-center bg-gradient-to-b from-white to-brand-offwhite/30"
+              className="relative card p-4 flex flex-col items-center justify-center hover:border-brand-emerald hover:shadow-md transition-all group aspect-square text-center bg-gradient-to-b from-white to-brand-offwhite/30"
             >
-              <div className="w-14 h-14 bg-brand-emerald/5 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-brand-emerald/10 transition-transform">
-                <Folder className="text-brand-emerald" size={28} strokeWidth={2.5} />
-              </div>
-              <span className="font-[Outfit,sans-serif] font-bold text-sm text-brand-charcoal line-clamp-2 leading-tight">
-                {cat.name}
-              </span>
-            </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setDeleteCategoryTarget(cat) }}
+                className="absolute top-2 right-2 p-1.5 rounded-lg text-brand-gray/50 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 lg:opacity-0 group-hover:opacity-100 z-10"
+                title="Delete Folder"
+              >
+                <Trash2 size={15} />
+              </button>
+              
+              <button onClick={() => setCurrentFolder(cat.id)} className="flex flex-col items-center w-full h-full justify-center gap-3">
+                <div className="w-14 h-14 bg-brand-emerald/5 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-brand-emerald/10 transition-transform">
+                  <Folder className="text-brand-emerald" size={28} strokeWidth={2.5} />
+                </div>
+                <span className="font-[Outfit,sans-serif] font-bold text-sm text-brand-charcoal line-clamp-2 leading-tight">
+                  {cat.name}
+                </span>
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -777,6 +802,34 @@ export default function ProductsClient({ initialProducts, categories }: { initia
               <button onClick={() => setShowCategoryForm(false)} disabled={isLoading} className="flex-1 btn-outline py-2.5">Cancel</button>
               <button onClick={handleSaveCategory} disabled={isLoading || !categoryForm.name.trim()} className="flex-1 btn-primary py-2.5 disabled:opacity-50">
                 {isLoading ? 'Saving...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+      {/* Delete Category Confirmation Modal */}
+      {deleteCategoryTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 sm:p-8 animate-fade-in text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h2 className="font-[Outfit,sans-serif] font-black text-xl text-brand-charcoal mb-2">Delete Folder?</h2>
+            <p className="text-brand-gray text-sm font-[Inter,sans-serif] mb-8">
+              Are you sure you want to delete <strong className="text-brand-charcoal">{deleteCategoryTarget.name}</strong>? 
+              This will remove the category.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleDeleteCategory(deleteCategoryTarget.id)}
+                disabled={isLoading}
+                className="w-full bg-red-500 text-white font-[Outfit,sans-serif] font-bold text-lg py-3.5 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Deleting...' : 'Yes, Delete it'}
+              </button>
+              <button onClick={() => setDeleteCategoryTarget(null)} disabled={isLoading} className="w-full bg-brand-offwhite text-brand-charcoal font-[Outfit,sans-serif] font-bold py-3.5 rounded-xl hover:bg-brand-light-gray transition-colors">
+                Cancel
               </button>
             </div>
           </div>

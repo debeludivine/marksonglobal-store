@@ -174,3 +174,17 @@ export async function createCategory(formData: FormData) {
   revalidatePath('/')
   return { success: true }
 }
+
+export async function deleteCategory(id: string) {
+  const supabase = await createAdminClient()
+  const { error } = await supabase.from('categories').delete().eq('id', id)
+  
+  if (error) {
+    console.error('Error deleting category:', error)
+    return { success: false, error: error.message }
+  }
+  
+  revalidatePath('/admin/dashboard/products')
+  revalidatePath('/')
+  return { success: true }
+}
