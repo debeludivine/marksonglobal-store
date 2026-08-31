@@ -57,9 +57,6 @@ export type AICatalogResult = {
 }
 
 export async function generateProductDetails(productName: string, existingCategories: any[]): Promise<AICatalogResult> {
-  const apiKey = getGeminiKey()
-  const ai = new GoogleGenAI({ apiKey })
-  
   const prompt = `You are an expert e-commerce catalog manager.
 Product Name: "${productName}"
 
@@ -76,15 +73,33 @@ For example, for an iPhone, the path might be: Electronics -> Mobile Phones -> i
 
 Make sure to strictly adhere to the JSON schema.`
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: responseSchema,
-      temperature: 0.2
-    }
-  })
+  const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.7-flash']
+  let lastError: any = null
 
-  return JSON.parse(response.text || '{}') as AICatalogResult
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const apiKey = getGeminiKey()
+    const ai = new GoogleGenAI({ apiKey })
+    const model = candidateModels[attempt % candidateModels.length]
+
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: responseSchema,
+          temperature: 0.2
+        }
+      })
+
+      if (response.text) {
+        return JSON.parse(response.text) as AICatalogResult
+      }
+    } catch (err: any) {
+      lastError = err
+      console.warn(`AI attempt ${attempt + 1} with model ${model} failed:`, err?.message || err)
+    }
+  }
+
+  throw lastError || new Error('Failed to generate product details with AI')
 }
