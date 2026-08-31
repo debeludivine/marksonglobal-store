@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
   if (pathname.startsWith('/admin/dashboard')) {
     if (!user) {
       const url = request.nextUrl.clone()
-      url.pathname = '/admin/login'
+      url.pathname = '/login'
       return NextResponse.redirect(url)
     }
     // User is authenticated but not the admin email — send them home
@@ -56,23 +56,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If logged-in admin visits admin login page, redirect to dashboard
+  // If logged-in admin visits the old admin login URL, redirect to dashboard
   if (user && pathname === '/admin/login') {
     if (user.email?.toLowerCase() === ADMIN_EMAIL) {
       const url = request.nextUrl.clone()
       url.pathname = '/admin/dashboard'
       return NextResponse.redirect(url)
     }
-    // Non-admin visiting /admin/login — redirect to home
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  // If logged-in user tries to visit customer login/register, redirect to profile
+  // If logged-in user tries to visit customer login/register, redirect appropriately
   if (user && (pathname === '/login' || pathname === '/register')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/profile'
+    if (user.email?.toLowerCase() === ADMIN_EMAIL) {
+      url.pathname = '/admin/dashboard'
+    } else {
+      url.pathname = '/profile'
+    }
     return NextResponse.redirect(url)
   }
 
