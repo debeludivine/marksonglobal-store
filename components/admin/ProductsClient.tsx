@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Package, X, Save, CheckSquare, Square, Folder, ChevronRight, Home, Image as ImageIcon, FolderPlus, AlertTriangle, Sparkles } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import type { Product } from '@/lib/types'
-import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategoryWithOptions } from '@/lib/admin-actions'
+import { addProduct, updateProduct, deleteProduct, batchDeleteProducts, createCategory, deleteCategoryWithOptions, generateProductDetailsAction } from '@/lib/admin-actions'
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount)
@@ -26,6 +26,7 @@ export default function ProductsClient({ initialProducts, categories }: { initia
   const [deleteMode, setDeleteMode] = useState<'cascade' | 'relocate'>('relocate')
   const [relocateTargetId, setRelocateTargetId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   // Quick Action States
@@ -158,6 +159,36 @@ export default function ProductsClient({ initialProducts, categories }: { initia
     const newSpecs = templateKeys.filter(k => !existingKeys.includes(k)).map(k => ({ key: k, value: '' }))
     
     setSpecs([...specs, ...newSpecs])
+  }
+
+  const handleAIGenerate = async () => {
+    if (!form.name.trim()) {
+      alert("Please enter a product name first!")
+      return
+    }
+    
+    setIsGeneratingAI(true)
+    const result = await generateProductDetailsAction(form.name)
+    setIsGeneratingAI(false)
+    
+    if (result.success && result.data) {
+      const data = result.data
+      
+      const newSpecs = Object.entries(data.specifications || {}).map(([key, value]) => ({ key, value: String(value) }))
+      setSpecs(newSpecs)
+      
+      setForm(prev => ({
+        ...prev,
+        description: data.description || prev.description,
+        category_id: data.categoryId || prev.category_id
+      }))
+      
+      if (data.categoryId) {
+        prepareFormCategory(data.categoryId)
+      }
+    } else {
+      alert(`AI Error: ${result.error}`)
+    }
   }
 
   const handleSave = async () => {
@@ -641,7 +672,17 @@ export default function ProductsClient({ initialProducts, categories }: { initia
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal mb-1 uppercase tracking-wide">Product Name *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-[Outfit,sans-serif] font-semibold text-brand-charcoal uppercase tracking-wide">Product Name *</label>
+                    <button 
+                      type="button"
+                      onClick={handleAIGenerate}
+                      disabled={isGeneratingAI || !form.name.trim()}
+                      className="text-xs font-semibold px-3 py-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full hover:shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Sparkles size={12} /> {isGeneratingAI ? 'Thinking...' : '✨ Auto-Fill with AI'}
+                    </button>
+                  </div>
                   <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. iPhone 15 Pro Max" className="w-full border border-brand-light-gray rounded-xl px-4 py-3 text-sm outline-none focus:border-brand-emerald" />
                 </div>
                 

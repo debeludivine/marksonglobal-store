@@ -2,6 +2,66 @@
 
 import { createAdminClient } from './supabase/server'
 import { revalidatePath } from 'next/cache'
+import { generateProductDetails } from './ai-catalog'
+
+export async function generateProductDetailsAction(productName: string) {
+  try {
+    const supabase = await createAdminClient()
+    
+    const { data: categories } = await supabase.from('categories').select('id, name, parent_id')
+    
+    const result = await generateProductDetails(productName, categories || [])
+    
+    let currentParentId: string | null = null
+    let finalCategoryId: string | null = null
+    
+    for (const step of result.categoryPath) {
+      if (step.action === 'use_existing' && step.id) {
+        currentParentId = step.id
+        finalCategoryId = step.id
+      } else if (step.action === 'create_new') {
+        let existingQuery = supabase.from('categories').select('id').eq('name', step.name)
+        if (currentParentId) {
+          existingQuery = existingQuery.eq('parent_id', currentParentId)
+        } else {
+          existingQuery = existingQuery.is('parent_id', null)
+        }
+        const { data: existing } = await existingQuery.maybeSingle()
+        
+        if (existing) {
+          currentParentId = existing.id
+          finalCategoryId = existing.id
+        } else {
+          const { data: newCat, error }: { data: any, error: any } = await supabase.from('categories').insert({
+            name: step.name,
+            slug: step.slug || step.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            parent_id: currentParentId
+          }).select().single()
+          
+          if (newCat) {
+            currentParentId = newCat.id
+            finalCategoryId = newCat.id
+          } else {
+            console.error("Error creating AI category:", error)
+          }
+        }
+      }
+    }
+    
+    revalidatePath('/admin/dashboard/products')
+    return { 
+      success: true, 
+      data: {
+        description: result.description,
+        specifications: result.specifications,
+        categoryId: finalCategoryId
+      }
+    }
+  } catch (err: any) {
+    console.error("AI Generation Error:", err)
+    return { success: false, error: err.message }
+  }
+}
 
 export async function addProduct(formData: FormData) {
   const supabase = await createAdminClient()
