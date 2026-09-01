@@ -9,6 +9,7 @@ import type { Metadata } from 'next'
 import AddToCartButton from '@/components/ui/AddToCartButton'
 import ReviewSection from '@/components/ui/ReviewSection'
 import WishlistButton from '@/components/ui/WishlistButton'
+import ProductGallery from '@/components/ui/ProductGallery'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -69,16 +70,12 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
-          {/* Image */}
-          <div className="relative bg-brand-offwhite rounded-2xl h-72 sm:h-96 lg:h-auto flex items-center justify-center shadow-card overflow-hidden">
-            {imageUrl ? (
-              <AdaptiveImage src={imageUrl} alt={product.name} fill className="object-contain p-4" priority={true} />
-            ) : (
-              <div className="text-[8rem] sm:text-[10rem] select-none">
-                {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
-              </div>
-            )}
-          </div>
+          {/* Interactive Multi-Image Gallery */}
+          <ProductGallery 
+            images={product.images || []} 
+            productName={product.name} 
+            categoryId={product.category_id} 
+          />
 
           {/* Details */}
           <div>

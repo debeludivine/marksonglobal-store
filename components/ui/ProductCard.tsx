@@ -3,7 +3,7 @@
 import { useState, useOptimistic, startTransition } from 'react'
 import Link from 'next/link'
 import { AdaptiveImage } from './AdaptiveImage'
-import { ShoppingCart, Star, Heart } from 'lucide-react'
+import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { toggleWishlist } from '@/lib/customer-actions'
 import { type Product } from '@/lib/types'
@@ -24,11 +24,57 @@ function formatNaira(amount: number) {
 export default function ProductCard({ product, isWishlisted = false }: Props) {
   const [added, setAdded] = useState(false)
   const [wishlisted, setWishlisted] = useState(isWishlisted)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [touchEndX, setTouchEndX] = useState<number | null>(null)
+
   const [optimisticWishlist, addOptimisticWishlist] = useOptimistic(
     wishlisted,
     (state, newState: boolean) => newState
   )
   const addItem = useCartStore((s) => s.addItem)
+
+  const images = (product.images && product.images.length > 0) ? product.images : []
+  const hasMultipleImages = images.length > 1
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+  }
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+  }
+
+  const handleDotClick = (e: React.MouseEvent, idx: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCurrentImageIndex(idx)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return
+    const distance = touchStartX - touchEndX
+    const minSwipeDistance = 35
+    if (distance > minSwipeDistance) {
+      setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+    } else if (distance < -minSwipeDistance) {
+      setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+    }
+    setTouchStartX(null)
+    setTouchEndX(null)
+  }
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -40,14 +86,12 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
     
-    // Instantly update the UI before server responds
     startTransition(async () => {
       addOptimisticWishlist(!wishlisted)
       try {
         const result = await toggleWishlist(product.id)
         setWishlisted(result.wishlisted)
       } catch (error) {
-        // Rollback state gracefully if network fails
         console.error("Network error toggling wishlist", error)
       }
     })
@@ -58,32 +102,95 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
     : null
 
   const isOutOfStock = product.stock_quantity === 0
-  const imageUrl = product.images?.[0] || null
 
   return (
     <Link
       href={`/product/${product.slug}`}
       id={`product-card-${product.id}`}
-      className="card group flex flex-col overflow-hidden hover:-translate-y-1 transition-all duration-300"
+      className="card group flex flex-col overflow-hidden hover:-translate-y-1 transition-all duration-300 bg-white border border-brand-light-gray rounded-2xl shadow-xs hover:shadow-card-hover"
     >
-      {/* Image Area */}
-      <div className="relative bg-brand-offwhite h-36 sm:h-48 flex items-center justify-center overflow-hidden">
-        {imageUrl ? (
-          <AdaptiveImage
-            src={imageUrl}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, 25vw"
-          />
+      {/* Swipeable Image Carousel Area */}
+      <div 
+        className="relative bg-brand-offwhite h-36 sm:h-48 overflow-hidden select-none"
+        onTouchStart={hasMultipleImages ? handleTouchStart : undefined}
+        onTouchMove={hasMultipleImages ? handleTouchMove : undefined}
+        onTouchEnd={hasMultipleImages ? handleTouchEnd : undefined}
+      >
+        {images.length > 0 ? (
+          <div 
+            className="flex w-full h-full transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
+          >
+            {images.map((img, idx) => (
+              <div key={idx} className="relative w-full h-full shrink-0 flex-none bg-brand-offwhite">
+                <AdaptiveImage
+                  src={img}
+                  alt={`${product.name} - ${idx + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, 25vw"
+                  priority={idx === 0}
+                />
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="text-5xl sm:text-6xl select-none">
+          <div className="w-full h-full flex items-center justify-center text-5xl sm:text-6xl select-none">
             {product.category_id === 'cat-electronics' ? '📦' : '🛒'}
           </div>
         )}
 
+        {/* Carousel Navigation Arrows (Desktop hover) */}
+        {hasMultipleImages && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrevImage}
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/40 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10 shadow-md backdrop-blur-xs hover:scale-105"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextImage}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/40 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10 shadow-md backdrop-blur-xs hover:scale-105"
+              aria-label="Next image"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </>
+        )}
+
+        {/* Jiji-Style Image Counter Badge */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-2 right-2 bg-black/65 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 z-10 pointer-events-none shadow-sm">
+            <Camera size={10} className="text-white/90" />
+            <span>{currentImageIndex + 1}/{images.length}</span>
+          </div>
+        )}
+
+        {/* Mini Pagination Dots */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10 pointer-events-auto">
+            {images.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={(e) => handleDotClick(e, idx)}
+                className={`h-1.5 rounded-full transition-all ${
+                  idx === currentImageIndex 
+                    ? 'w-3.5 bg-white shadow-sm' 
+                    : 'w-1.5 bg-white/50 hover:bg-white/80'
+                }`}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
           {product.is_deal && <span className="deal-badge">🔥 Deal</span>}
           {discountPercent && <span className="discount-badge">-{discountPercent}%</span>}
           {isOutOfStock && (
@@ -96,7 +203,7 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
         {/* Wishlist button */}
         <button
           onClick={handleToggleWishlist}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform z-10"
           aria-label={optimisticWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
         >
           <Heart
@@ -159,3 +266,4 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
     </Link>
   )
 }
+
