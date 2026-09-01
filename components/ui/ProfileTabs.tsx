@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Package, Heart, Clock, Truck } from 'lucide-react'
 import ProductCard from '@/components/ui/ProductCard'
-import { type Product } from '@/lib/seed-data'
+import { useWishlistStore } from '@/store/wishlistStore'
+import { type Product } from '@/lib/types'
 
 type Order = {
   id: string
@@ -32,6 +33,14 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function ProfileTabs({ orders, wishlistProducts, formatNaira }: Props) {
   const [activeTab, setActiveTab] = useState<'orders' | 'wishlist'>('orders')
+  const [mounted, setMounted] = useState(false)
+  const storeItems = useWishlistStore((s) => s.items)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const displayWishlist = mounted && storeItems.length > 0 ? storeItems : wishlistProducts
 
   return (
     <div>
@@ -44,7 +53,7 @@ export default function ProfileTabs({ orders, wishlistProducts, formatNaira }: P
           }`}
         >
           <Package size={18} />
-          Orders
+          Orders ({orders.length})
           {activeTab === 'orders' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-emerald" />}
         </button>
         <button
@@ -54,40 +63,42 @@ export default function ProfileTabs({ orders, wishlistProducts, formatNaira }: P
           }`}
         >
           <Heart size={18} />
-          Wishlist
+          Wishlist ({displayWishlist.length})
           {activeTab === 'wishlist' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-emerald" />}
         </button>
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div>
         {activeTab === 'orders' ? (
           <div className="space-y-4">
             {orders.length > 0 ? (
               orders.map((order) => (
-                <div key={order.id} className="card p-4 sm:p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-brand-light-gray pb-4">
+                <div key={order.id} className="card p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-brand-light-gray">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-[Outfit,sans-serif] font-semibold text-sm text-brand-charcoal">#{order.id.slice(0, 8)}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-brand-gray font-[Inter,sans-serif] flex items-center gap-1">
-                        <Clock size={12} /> Placed on {order.created_at}
+                      <p className="text-xs text-brand-gray font-mono">ORDER #{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-brand-gray flex items-center gap-1 mt-0.5">
+                        <Clock size={12} /> {order.created_at}
                       </p>
                     </div>
-                    <div className="text-left sm:text-right">
-                      <p className="font-[Outfit,sans-serif] font-black text-lg text-brand-charcoal">{formatNaira(order.total_amount)}</p>
-                      <p className="text-xs text-brand-gray font-[Inter,sans-serif]">{order.items} item{order.items !== 1 ? 's' : ''}</p>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                        {order.status}
+                      </span>
+                      <span className="font-[Outfit,sans-serif] font-bold text-brand-charcoal text-base">
+                        {formatNaira(order.total_amount)}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 text-sm text-brand-gray font-[Inter,sans-serif] bg-brand-offwhite p-3 rounded-lg">
-                    <Truck size={16} className="mt-0.5 text-brand-emerald flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-brand-charcoal">{order.recipient_name}</p>
-                      <p className="text-xs mt-0.5">{order.shipping_address}</p>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-brand-gray gap-2">
+                    <p>{order.items} item{order.items !== 1 ? 's' : ''}</p>
+                    <div className="text-xs text-brand-gray flex items-center gap-1.5">
+                      <Truck size={13} className="text-brand-emerald" />
+                      <span>{order.recipient_name}</span>
+                      <span>•</span>
+                      <span className="text-xs truncate max-w-[200px]">{order.shipping_address}</span>
                     </div>
                   </div>
                 </div>
@@ -103,10 +114,10 @@ export default function ProfileTabs({ orders, wishlistProducts, formatNaira }: P
           </div>
         ) : (
           <div>
-            {wishlistProducts.length > 0 ? (
+            {displayWishlist.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                {wishlistProducts.map((p) => (
-                  <ProductCard key={p.id} product={p} isWishlisted={true} />
+                {displayWishlist.map((p) => (
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
             ) : (

@@ -46,6 +46,7 @@ export default function Footer() {
                 { label: 'Groceries & Provisions', href: '/category/groceries' },
                 { label: 'Electronics', href: '/category/electronics' },
                 { label: "Today's Deals", href: '/deals' },
+                { label: 'Saved Items', href: '/saved' },
                 { label: 'My Cart', href: '/cart' },
               ].map((link) => (
                 <li key={link.href}>

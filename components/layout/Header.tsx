@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, Search, Menu, X, User } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, User, Heart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { useWishlistStore } from '@/store/wishlistStore'
 import { createClient } from '@/lib/supabase/client'
 import { logout } from '@/lib/customer-auth-actions'
 
@@ -17,6 +18,7 @@ export default function Header() {
   const [session, setSession] = useState<any>(null)
   
   const totalItems = useCartStore((s) => s.totalItems)
+  const totalWishlist = useWishlistStore((s) => s.totalCount)
   const supabase = createClient()
 
   useEffect(() => {
@@ -131,6 +133,12 @@ export default function Header() {
                     {session ? (
                       <>
                         <Link href="/profile" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">My Profile</Link>
+                        <Link href="/saved" onClick={() => setUserMenuOpen(false)} className="flex items-center justify-between px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">
+                          <span>Saved Items</span>
+                          {mounted && totalWishlist() > 0 && (
+                            <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">{totalWishlist()}</span>
+                          )}
+                        </Link>
                         <Link href="/admin/dashboard" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Admin Dashboard</Link>
                         <div className="border-t border-brand-light-gray my-1"></div>
                         <form action={logout}>
@@ -139,6 +147,12 @@ export default function Header() {
                       </>
                     ) : (
                       <>
+                        <Link href="/saved" onClick={() => setUserMenuOpen(false)} className="flex items-center justify-between px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">
+                          <span>Saved Items</span>
+                          {mounted && totalWishlist() > 0 && (
+                            <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">{totalWishlist()}</span>
+                          )}
+                        </Link>
                         <Link href="/login" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Sign In</Link>
                         <Link href="/register" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-brand-charcoal hover:bg-brand-offwhite">Create Account</Link>
                         <div className="border-t border-brand-light-gray my-1"></div>
@@ -149,6 +163,21 @@ export default function Header() {
                 </>
               )}
             </div>
+
+            {/* Saved Items */}
+            <Link
+              href="/saved"
+              id="header-wishlist-button"
+              className="relative p-2.5 rounded-xl text-brand-charcoal hover:bg-brand-offwhite transition-colors"
+              aria-label="Saved items"
+            >
+              <Heart size={20} className={mounted && totalWishlist() > 0 ? "text-red-500 fill-red-500" : ""} />
+              {mounted && totalWishlist() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[17px] h-[17px] rounded-full flex items-center justify-center px-1 animate-fade-in shadow-xs">
+                  {totalWishlist()}
+                </span>
+              )}
+            </Link>
 
             {/* Cart */}
             <Link
@@ -215,6 +244,21 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/saved"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-[Outfit,sans-serif] font-medium text-brand-charcoal hover:text-brand-emerald hover:bg-brand-offwhite"
+            >
+              <span className="flex items-center gap-2">
+                <Heart size={16} className="text-red-500 fill-red-500" />
+                Saved Items
+              </span>
+              {mounted && totalWishlist() > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {totalWishlist()}
+                </span>
+              )}
+            </Link>
           </nav>
         </div>
       )}
