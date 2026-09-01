@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useOptimistic, startTransition } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { AdaptiveImage } from './AdaptiveImage'
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
-import { toggleWishlist } from '@/lib/customer-actions'
+import { useWishlistStore } from '@/store/wishlistStore'
 import { type Product } from '@/lib/types'
 
 type Props = {
@@ -21,17 +21,14 @@ function formatNaira(amount: number) {
   }).format(amount)
 }
 
-export default function ProductCard({ product, isWishlisted = false }: Props) {
+export default function ProductCard({ product }: Props) {
   const [added, setAdded] = useState(false)
-  const [wishlisted, setWishlisted] = useState(isWishlisted)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [touchEndX, setTouchEndX] = useState<number | null>(null)
 
-  const [optimisticWishlist, addOptimisticWishlist] = useOptimistic(
-    wishlisted,
-    (state, newState: boolean) => newState
-  )
+  const isWishlisted = useWishlistStore((s) => s.isWishlisted(product.id))
+  const toggleItem = useWishlistStore((s) => s.toggleItem)
   const addItem = useCartStore((s) => s.addItem)
 
   const images = (product.images && product.images.length > 0) ? product.images : []
@@ -83,18 +80,10 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
     setTimeout(() => setAdded(false), 1500)
   }
 
-  const handleToggleWishlist = (e: React.MouseEvent) => {
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault()
-    
-    startTransition(async () => {
-      addOptimisticWishlist(!wishlisted)
-      try {
-        const result = await toggleWishlist(product.id)
-        setWishlisted(result.wishlisted)
-      } catch (error) {
-        console.error("Network error toggling wishlist", error)
-      }
-    })
+    e.stopPropagation()
+    await toggleItem(product)
   }
 
   const discountPercent = product.discount_price
@@ -202,13 +191,16 @@ export default function ProductCard({ product, isWishlisted = false }: Props) {
 
         {/* Wishlist button */}
         <button
+          type="button"
           onClick={handleToggleWishlist}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform z-10"
-          aria-label={optimisticWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-transform z-20 cursor-pointer"
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
           <Heart
-            size={15}
-            className={optimisticWishlist ? 'text-red-500 fill-red-500' : 'text-brand-gray'}
+            size={16}
+            className={`transition-colors ${
+              isWishlisted ? 'text-red-500 fill-red-500' : 'text-brand-gray hover:text-red-400'
+            }`}
           />
         </button>
       </div>
